@@ -150,6 +150,9 @@ TableRecord *getFirstRecordFromTable(Table *table);
 /// Returns a valid JSON string containing the table
 char *transformTableToJSON(Table *table);
 
+/// Creates a table from a JSON line
+Table *parseTableJSON(const char *line);
+
 /// Destroys the table instance
 void destroyTable(Table *table);
 

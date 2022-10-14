@@ -471,8 +471,10 @@ void insertTableRecord(Table *table, TableRecord *tableRecord)
         if (!table->firstTableRecord) {
             table->firstTableRecord = tableRecord;
         } else {
-            table->firstTableRecord->next_record = tableRecord;
-            tableRecord->prev_record = table->firstTableRecord;
+            tableRecord->next_record = table->firstTableRecord;
+            table->firstTableRecord->prev_record = tableRecord;
+
+            table->firstTableRecord = tableRecord;
         }
     }
 }
@@ -497,8 +499,6 @@ TableRecord *getFirstRecordFromTable(Table *table)
 
 char *transformTableToJSON(Table *table)
 {
-    /// {"TABLE_NAME":"","TABLE_SIZE":"","TABLE_SCHEMA":,"TABLE_DATA":[]}
-
     if (!table) {
         return "";
     } else {
@@ -627,6 +627,203 @@ char *transformTableToJSON(Table *table)
         free(num_of_records);
 
         return line;
+    }
+}
+
+TableRecord *parseTableRecordJSON(const char *line, size_t pos, TableSchema *tableSchema, size_t *new_index) {
+    if (!line || !tableSchema) {
+        return NULL;
+    } else {
+        char *cell_value;
+        DataCell **dataCells;
+
+        size_t begin_index, index = pos;
+
+        index += 2;
+        index += strlen(JSON_RECORD);
+        index += 3;
+
+        if (tableSchema->number_of_fields > 0) {
+            dataCells = (DataCell**) malloc(sizeof(DataCell*) * tableSchema->number_of_fields);
+
+            for (size_t i = 0; i < tableSchema->number_of_fields; i++) {
+                index += 2;
+
+                begin_index = index;
+
+                while (line[index] != '"') index++;
+
+                cell_value = malloc(index - begin_index + 1);
+
+                for (size_t j = begin_index; j < index; j++) {
+                    cell_value[j - begin_index] = line[j];
+                }
+
+                cell_value[index] = '\0';
+
+                dataCells[i] = createDataCell(tableSchema->fields[i], cell_value);
+
+                index++;
+            }
+
+            *new_index = index;
+
+            return createTableRecord(tableSchema->number_of_fields, dataCells);
+        }
+
+        return NULL;
+    }
+}
+
+Table *parseTableJSON(const char *line) {
+    if (!line) {
+        return NULL;
+    } else {
+        char *table_name;
+        size_t table_size = 0;
+        size_t schema_key_col_i = 0;
+        size_t schema_num_of_fields = 0;
+        char **field_names;
+        Field **fields;
+        TableSchema *tableSchema;
+        Table *table;
+
+        size_t begin_index, index = 2;
+
+        index += strlen(JSON_TABLE_NAME);
+        index += 3;
+
+        begin_index = index;
+
+        while (line[index] != '"') index++;
+
+        table_name = malloc(index - begin_index + 1);
+
+        for (size_t i = begin_index; i < index; i++) {
+            table_name[i - begin_index] = line[i];
+        }
+
+        table_name[index] = '\0';
+
+        index += 3;
+        index += strlen(JSON_TABLE_SIZE);
+        index += 3;
+
+        while (line[index] != '"') {
+            table_size += line[index] - '0';
+            table_size *= 10;
+            index++;
+        }
+
+        table_size /= 10;
+
+        index += 3;
+        index += strlen(JSON_TABLE_SCHEMA);
+        index += 4;
+        index += strlen(JSON_SCHEMA_KEY_I);
+        index += 3;
+
+        while (line[index] != '"') {
+            schema_key_col_i += line[index] - '0';
+            schema_key_col_i *= 10;
+            index++;
+        }
+
+        schema_key_col_i /= 10;
+
+        index += 3;
+        index += strlen(JSON_SCHEMA_NUM_OF_FIELDS);
+        index += 3;
+
+        while (line[index] != '"') {
+            schema_num_of_fields += line[index] - '0';
+            schema_num_of_fields *= 10;
+            index++;
+        }
+
+        schema_num_of_fields /= 10;
+
+        field_names = (char **) malloc(sizeof(char *) * schema_num_of_fields);
+        fields = (Field **) malloc(sizeof(Field) * schema_num_of_fields);
+
+        index += 3;
+        index += strlen(JSON_SCHEMA_FIELDS);
+        index += 2;
+
+        for (size_t i = 0; i < schema_num_of_fields; i++) {
+            index += 3;
+            index += strlen(JSON_FIELD_NAME);
+            index += 3;
+
+            begin_index = index;
+
+            while (line[index] != '"') index++;
+
+            field_names[i] = malloc(index - begin_index + 1);
+
+            for (size_t j = begin_index; j < index; j++) {
+                field_names[i][j - begin_index] = line[j];
+            }
+
+            field_names[i][index - begin_index] = '\0';
+
+            index += 3;
+            index += strlen(JSON_FIELD_TYPE);
+            index += 3;
+
+            FieldType fieldType;
+
+            switch (line[index]) {
+                case 'I':
+                    fieldType = INTEGER;
+                    break;
+
+                case 'F':
+                    fieldType = FLOAT;
+                    break;
+
+                case 'S':
+                    fieldType = STRING;
+                    break;
+
+                case 'B':
+                    fieldType = BOOLEAN;
+                    break;
+
+                default:
+                    fieldType = INTEGER;
+                    break;
+            }
+
+            index += 3;
+
+            fields[i] = createField(field_names[i], fieldType);
+        }
+
+        tableSchema = createTableSchema(fields, schema_num_of_fields, schema_key_col_i);
+
+        table = createTable(tableSchema, table_name);
+
+        if (table_size > 0) {
+            size_t *new_index = malloc(sizeof(size_t));
+
+            index += 4;
+            index += strlen(JSON_TABLE_DATA);
+            index += 2;
+
+            for (size_t i = 0; i < table_size; i++) {
+                TableRecord *tableRecord = parseTableRecordJSON(line, index, tableSchema, new_index);
+
+                insertTableRecord(table, tableRecord);
+
+                index = *new_index;
+                index += 2;
+            }
+
+            free(new_index);
+        }
+
+        return table;
     }
 }
 
