@@ -3,8 +3,6 @@
 //
 #include "db_internals.h"
 
-#include <stdio.h>
-
 char *uint_to_str(unsigned int num)
 {
     size_t length = 0;
@@ -812,9 +810,7 @@ Table *parseTableJSON(const char *line) {
             index += 2;
 
             for (size_t i = 0; i < table_size; i++) {
-                TableRecord *tableRecord = parseTableRecordJSON(line, index, tableSchema, new_index);
-
-                insertTableRecord(table, tableRecord);
+                insertTableRecord(table, parseTableRecordJSON(line, index, tableSchema, new_index));
 
                 index = *new_index;
                 index += 2;
