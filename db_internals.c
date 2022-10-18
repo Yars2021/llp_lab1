@@ -657,7 +657,7 @@ TableRecord *parseTableRecordJSON(const char *line, size_t pos, TableSchema *tab
                     cell_value[j - begin_index] = line[j];
                 }
 
-                cell_value[index] = '\0';
+                cell_value[index - begin_index] = '\0';
 
                 dataCells[i] = createDataCell(tableSchema->fields[i], cell_value);
 
@@ -701,7 +701,7 @@ Table *parseTableJSON(const char *line) {
             table_name[i - begin_index] = line[i];
         }
 
-        table_name[index] = '\0';
+        table_name[index - begin_index] = '\0';
 
         index += 3;
         index += strlen(JSON_TABLE_SIZE);

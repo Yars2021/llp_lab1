@@ -19,6 +19,8 @@
 #define JSON_TABLE_SCHEMA "TABLE_SCHEMA"
 #define JSON_TABLE_DATA "TABLE_DATA"
 
+char *uint_to_str(unsigned int num);
+
 /// Types of fields in a table
 typedef enum FieldType
 {
