@@ -299,7 +299,7 @@ char *serializeHeader(DBFileHeader *dbFileHeader)
 void persistDatabase(DBFileHeader *dbFileHeader)
 {
     if (dbFileHeader) {
-        FILE *file = fopen(dbFileHeader->target_file_path, "w+");
+        FILE *file = fopen(dbFileHeader->target_file_path, "w");
 
         if (!file) return;  // Invalid path (file could not be created)
 
