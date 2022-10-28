@@ -639,7 +639,7 @@ TableRecord *parseTableRecordJSON(const char *line, size_t pos, TableSchema *tab
 
         index += 2;
         index += strlen(JSON_RECORD);
-        index += 3;
+        index += 2;
 
         if (tableSchema->number_of_fields > 0) {
             dataCells = (DataCell**) malloc(sizeof(DataCell*) * tableSchema->number_of_fields);
@@ -673,7 +673,7 @@ TableRecord *parseTableRecordJSON(const char *line, size_t pos, TableSchema *tab
     }
 }
 
-Table *parseTableJSON(const char *line) {
+Table *parseTableHeaderJSON(const char *line, size_t pos, size_t *new_index) {
     if (!line) {
         return NULL;
     } else {
@@ -686,7 +686,7 @@ Table *parseTableJSON(const char *line) {
         TableSchema *tableSchema;
         Table *table;
 
-        size_t begin_index, index = 2;
+        size_t begin_index, index = pos + 2;
 
         index += strlen(JSON_TABLE_NAME);
         index += 3;
@@ -799,21 +799,37 @@ Table *parseTableJSON(const char *line) {
         }
 
         tableSchema = createTableSchema(fields, schema_num_of_fields, schema_key_col_i);
-
         table = createTable(tableSchema, table_name);
+        table->length = table_size;
 
-        if (table_size > 0) {
+        index += 3;
+        index += strlen(JSON_TABLE_DATA);
+        index += 4;
+
+        *new_index = index;
+
+        return table;
+    }
+}
+
+Table *parseTableJSON(const char *line, size_t pos)
+{
+    if (!line) {
+        return NULL;
+    } else {
+        size_t index;
+
+        Table *table = parseTableHeaderJSON(line, pos, &index);
+
+        if (table->length > 0) {
             size_t *new_index = malloc(sizeof(size_t));
 
-            index += 4;
-            index += strlen(JSON_TABLE_DATA);
-            index += 2;
-
-            for (size_t i = 0; i < table_size; i++) {
-                insertTableRecord(table, parseTableRecordJSON(line, index, tableSchema, new_index));
+            for (size_t i = 0; i < table->length; i++) {
+                insertTableRecord(table, parseTableRecordJSON(line, index, table->tableSchema, new_index));
+                table->length--;
 
                 index = *new_index;
-                index += 2;
+                index += 3;
             }
 
             free(new_index);

@@ -24,10 +24,10 @@
  *
  *      Header (path, db_name, num_of_tables, table_node_set)
  *
- *      Table1 JSON
- *      Table2 JSON
+ *      <Status><Length>Table1 JSON
+ *      <Status><Length>Table2 JSON
  *      ...
- *      TableN JSON
+ *      <Status><Length>TableN JSON
  *
  *  The set of names is always sorted, it means finding a table will take ~log(num_of_tables) time
  *  The set of names is a red-black tree

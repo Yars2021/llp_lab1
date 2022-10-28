@@ -120,6 +120,9 @@ void updateTableRecord(TableRecord *tableRecord, size_t cell_index, DataCell *da
 /// Returns a valid JSON string containing the record data
 char *transformTableRecordToJSON(TableRecord *tableRecord);
 
+/// Creates a table record from a JSON line
+TableRecord *parseTableRecordJSON(const char *line, size_t pos, TableSchema *tableSchema, size_t *new_index);
+
 /// destroys the instance of table record
 void destroyTableRecord(TableRecord *tableRecord);
 
@@ -152,8 +155,11 @@ TableRecord *getFirstRecordFromTable(Table *table);
 /// Returns a valid JSON string containing the table
 char *transformTableToJSON(Table *table);
 
+/// Creates a table header from a JSON line
+Table *parseTableHeaderJSON(const char *line, size_t pos, size_t *new_index);
+
 /// Creates a table from a JSON line
-Table *parseTableJSON(const char *line);
+Table *parseTableJSON(const char *line, size_t pos);
 
 /// Destroys the table instance
 void destroyTable(Table *table);

@@ -62,7 +62,7 @@ void updateDBFileTableNodeLineNumber(DBFileTableNode *dbFileTableNode, unsigned 
 int getDBFileTableNodeColor(DBFileTableNode *dbFileTableNode)
 {
     if (!dbFileTableNode) {
-        return 0;
+        return RBT_CLR_BLACK;
     } else {
         return dbFileTableNode->node_color;
     }
