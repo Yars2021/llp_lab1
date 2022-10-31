@@ -72,32 +72,18 @@ char *transformTableSchemaToJSON(TableSchema *tableSchema);
 void destroyTableSchema(TableSchema *tableSchema);
 
 
-/// Describes a cell (field and it's value)
-typedef struct DataCell
-{
-    Field *field;
-    char *value;
-} DataCell;
-
-/// Creates a new data cell
-DataCell *createDataCell(Field *field, char *value);
-
-/// Destroys the data cell instance
-void destroyDataCell(DataCell *dataCell);
-
-
-/// Creates a table record, which is an array of DataCell pointers.
+/// Creates a table record, which is an array of string pointers.
 /// Each record is linked to the next and previous ones, which helps to iterate through them
 typedef struct TableRecord
 {
     size_t length;
     struct TableRecord *next_record;
     struct TableRecord *prev_record;
-    DataCell **dataCells;
+    char **dataCells;
 } TableRecord;
 
 /// Creates an instance of a table record (next is NULL by default)
-TableRecord *createTableRecord(size_t length, DataCell **dataCells);
+TableRecord *createTableRecord(size_t length, char **dataCells);
 
 /// Links the record to the next one
 void linkToTheNextTableRecord(TableRecord *tableRecord);
@@ -112,10 +98,10 @@ TableRecord *getNextTableRecord(TableRecord *tableRecord);
 TableRecord *getPrevTableRecord(TableRecord *tableRecord);
 
 /// Returns an array of data cells, which are contained in the record
-DataCell **getDataCells(TableRecord *tableRecord);
+char **getDataCells(TableRecord *tableRecord);
 
 /// Updates a cell in the record
-void updateTableRecord(TableRecord *tableRecord, size_t cell_index, DataCell *dataCell);
+void updateTableRecord(TableRecord *tableRecord, size_t cell_index, char *dataCell);
 
 /// Returns a valid JSON string containing the record data
 char *transformTableRecordToJSON(TableRecord *tableRecord);
