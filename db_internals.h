@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #define JSON_FIELD_NAME "F_NAME"
 #define JSON_FIELD_TYPE "F_TYPE"
@@ -59,12 +60,6 @@ typedef struct TableSchema
 /// Creates a new instance of a schema
 TableSchema *createTableSchema(Field **fields, size_t number_of_fields, size_t key_column_index);
 
-/// Updates a column name
-void updateTableSchemaColumnName(TableSchema *tableSchema, size_t column_index, char *field_name);
-
-/// Updates a column type
-void updateTableSchemaColumnType(TableSchema *tableSchema, size_t column_index, FieldType fieldType);
-
 /// Returns a valid JSON string containing the schema data
 char *transformTableSchemaToJSON(TableSchema *tableSchema);
 
@@ -82,26 +77,11 @@ typedef struct TableRecord
     char **dataCells;
 } TableRecord;
 
+/// Creates a data cell from a string
+char *createDataCell(const char *value);
+
 /// Creates an instance of a table record (next is NULL by default)
 TableRecord *createTableRecord(size_t length, char **dataCells);
-
-/// Links the record to the next one
-void linkToTheNextTableRecord(TableRecord *tableRecord);
-
-/// Links the record to the previous one
-void linkToThePrevTableRecord(TableRecord *tableRecord);
-
-/// Returns the next record
-TableRecord *getNextTableRecord(TableRecord *tableRecord);
-
-/// Returns the previous record
-TableRecord *getPrevTableRecord(TableRecord *tableRecord);
-
-/// Returns an array of data cells, which are contained in the record
-char **getDataCells(TableRecord *tableRecord);
-
-/// Updates a cell in the record
-void updateTableRecord(TableRecord *tableRecord, size_t cell_index, char *dataCell);
 
 /// Returns a valid JSON string containing the record data
 char *transformTableRecordToJSON(TableRecord *tableRecord);
@@ -126,26 +106,14 @@ typedef struct Table
 /// Creates a new table
 Table *createTable(TableSchema *tableSchema, char *table_name);
 
-/// Updates the table name
-void updateTableName(Table *table, char *new_table_name);
-
 /// Adds a new line to the table
 void insertTableRecord(Table *table, TableRecord *tableRecord);
-
-/// Returns the length of the table
-size_t getTableLength(Table *table);
-
-/// Returns the record list head
-TableRecord *getFirstRecordFromTable(Table *table);
 
 /// Returns a valid JSON string containing the table
 char *transformTableToJSON(Table *table);
 
 /// Creates a table header from a JSON line
 Table *parseTableHeaderJSON(const char *line, size_t pos, size_t *new_index);
-
-/// Creates a table from a JSON line
-Table *parseTableJSON(const char *line, size_t pos);
 
 /// Destroys the table instance
 void destroyTable(Table *table);
