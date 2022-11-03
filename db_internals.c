@@ -446,9 +446,22 @@ Table *parseTableHeaderJSON(const char *line, size_t pos, size_t *new_index) {
     }
 }
 
-void destroyTable(Table *table) // ToDo Rewrite
+void destroyTable(Table *table)
 {
     if (table) {
+        table->table_name = "";
+        destroyTableSchema(table->tableSchema);
 
+        TableRecord **tableRecords = (TableRecord**) malloc(sizeof(TableRecord*) * table->length);
+        TableRecord *current = table->firstTableRecord;
+
+        for (size_t i = 0; i < table->length; i++, current = current->next_record) tableRecords[i] = current;
+        for (size_t i = 0; i < table->length; i++) destroyTableRecord(tableRecords[i]);
+
+        free(tableRecords);
+
+        table->length = 0;
+        table->firstTableRecord = NULL;
+        free(table);
     }
 }
