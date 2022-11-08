@@ -75,8 +75,8 @@ typedef struct TableRecord {
 /// Creates a data cell from a string.
 char *createDataCell(const char *value);
 
-/// Creates a new string, which is the substring of the original one.
-char *substrToDataCell(const char *origin, size_t begin, size_t end);
+/// Creates a new string, which is a substring of the original one.
+char *substrToNewInstance(const char *origin, size_t begin, size_t end);
 
 /// Creates an instance of a table record (next is NULL by default).
 TableRecord *createTableRecord(size_t length, char **dataCells);

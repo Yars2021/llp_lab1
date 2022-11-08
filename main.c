@@ -52,12 +52,14 @@ int main()
     TableSchema *tableSchema = createTableSchema(fields, 3, 1);
 
     size_t i;
-    TableRecord *tableRecord = parseTableRecordJSON("{\"RECORD\":[\"123\",\"56asdhgasjh askda\",\"56765sadasd    asdlhas\"]}", 0, &i, tableSchema);
+    TableRecord *tableRecord = parseTableRecordJSON("{\"RECORD\":[\"123\",\"22\",\"d\"]}", 0, &i, tableSchema);
 
     printf("%s\n", tableRecord->dataCells[0]);
     printf("%s\n", tableRecord->dataCells[1]);
     printf("%s\n", tableRecord->dataCells[2]);
     printf("%s\n", transformTableRecordToJSON(tableRecord));
+
+    printf("%zd %zu\n\n", strlen("{\"RECORD\":[\"123\",\"22\",\"d\"]}"), i);
 
     destroyTableSchema(tableSchema);
     destroyTableRecord(tableRecord);

@@ -16,9 +16,7 @@ char *transformFieldToJSON(Field *field)
     /// {"F_NAME":"field->name","F_TYPE":"field->type"}
 
     if (!field) return "";
-
     char type, *line = (char*) malloc(strlen("{'':'','':''}") + strlen(JSON_FIELD_NAME) + strlen(JSON_FIELD_TYPE) + strlen(field->field_name) + 2);
-
     switch (field->fieldType) {
         case INTEGER:
             type = 'I';
@@ -33,7 +31,6 @@ char *transformFieldToJSON(Field *field)
             type = 'S';
             break;
     }
-
     sprintf(line, "{\"%s\":\"%s\",\"%s\":\"%c\"}", JSON_FIELD_NAME, field->field_name, JSON_FIELD_TYPE, type);
 
     return line;
@@ -98,23 +95,20 @@ char *transformTableSchemaToJSON(TableSchema *tableSchema)
 
 void destroyTableSchema(TableSchema *tableSchema)
 {
-    if (tableSchema) {
-        if (tableSchema->fields) {
-            for (size_t i = 0; i < tableSchema->number_of_fields; i++)
-                if (tableSchema->fields[i]) destroyField(tableSchema->fields[i]);
+    if (!tableSchema || !tableSchema->fields) return;
+    for (size_t i = 0; i < tableSchema->number_of_fields; i++)
+        if (tableSchema->fields[i]) destroyField(tableSchema->fields[i]);
 
-            free(tableSchema->fields);
-        }
+    free(tableSchema->fields);
 
-        tableSchema->fields = NULL;
-        tableSchema->number_of_fields = 0;
-        tableSchema->key_column_index = 0;
+    tableSchema->fields = NULL;
+    tableSchema->number_of_fields = 0;
+    tableSchema->key_column_index = 0;
 
-        free(tableSchema);
-    }
+    free(tableSchema);
 }
 
-char *substrToDataCell(const char *origin, size_t begin, size_t end)
+char *substrToNewInstance(const char *origin, size_t begin, size_t end)
 {
     if (!origin || begin >= strlen(origin) || end >= strlen(origin) || begin >= end) return NULL;
 
@@ -179,29 +173,25 @@ char *transformTableRecordToJSON(TableRecord *tableRecord)
 
 void destroyTableRecord(TableRecord *tableRecord)
 {
-    if (tableRecord) {
-        if (tableRecord->dataCells) {
-            for (size_t i = 0; i < tableRecord->length; i++)
-                if (tableRecord->dataCells[i])
-                    free(tableRecord->dataCells[i]);
+    if (!tableRecord || !tableRecord->dataCells) return;
+    for (size_t i = 0; i < tableRecord->length; i++)
+        if (tableRecord->dataCells[i]) free(tableRecord->dataCells[i]);
 
-            free(tableRecord->dataCells);
+    free(tableRecord->dataCells);
+
+    tableRecord->dataCells = NULL;
+
+    if (!tableRecord->prev_record) {
+        if (tableRecord->next_record) tableRecord->next_record->prev_record = NULL;
+    } else {
+        if (!tableRecord->next_record) tableRecord->prev_record->next_record = NULL;
+        else {
+            tableRecord->prev_record->next_record = tableRecord->next_record;
+            tableRecord->next_record->prev_record = tableRecord->prev_record;
         }
-
-        tableRecord->dataCells = NULL;
-
-        if (!tableRecord->prev_record) {
-            if (tableRecord->next_record) tableRecord->next_record->prev_record = NULL;
-        } else {
-            if (!tableRecord->next_record) tableRecord->prev_record->next_record = NULL;
-            else {
-                tableRecord->prev_record->next_record = tableRecord->next_record;
-                tableRecord->next_record->prev_record = tableRecord->prev_record;
-            }
-        }
-
-        free(tableRecord);
     }
+
+    free(tableRecord);
 }
 
 
@@ -247,7 +237,7 @@ TableRecord *parseTableRecordJSON(const char *line, size_t pos, size_t *ending_i
     regmatch_t groups[tableSchema->number_of_fields + 1];
     int comp_ec, exec_ec;
 
-    comp_ec = regcomp( &regexp_rec, format, REG_EXTENDED);
+    comp_ec = regcomp(&regexp_rec, format, REG_EXTENDED);
 
     if (comp_ec != REG_NOERROR) return NULL;
 
@@ -256,11 +246,15 @@ TableRecord *parseTableRecordJSON(const char *line, size_t pos, size_t *ending_i
     if (exec_ec == REG_NOMATCH) return NULL;
 
     char **cells = (char**) malloc(sizeof(char*) * tableSchema->number_of_fields);
-    for (size_t i = 1; i < tableSchema->number_of_fields + 1; i++) cells[i - 1] = substrToDataCell(line, groups[i].rm_so, groups[i].rm_eo);
+    for (size_t i = 1; i < tableSchema->number_of_fields + 1; i++) cells[i - 1] = substrToNewInstance(line,groups[i].rm_so,groups[i].rm_eo);
 
     TableRecord *tableRecord = createTableRecord(tableSchema->number_of_fields, cells);
 
     free(format);
+
+    *ending_index = pos + strlen("{'':[]}") + strlen(JSON_RECORD);
+    for (size_t i = 0; i < tableSchema->number_of_fields; i++) *ending_index += (strlen("'',") + strlen(cells[i]));
+    (*ending_index)--;
 
     return tableRecord;
 }
@@ -268,25 +262,24 @@ TableRecord *parseTableRecordJSON(const char *line, size_t pos, size_t *ending_i
 Table *parseTableHeaderJSON(const char *line, size_t pos, size_t *ending_index)
 {
     if (!line) return NULL;
-
+    // ToDo Write implementation
 }
 
 void destroyTable(Table *table)
 {
-    if (table) {
-        table->table_name = "";
-        destroyTableSchema(table->tableSchema);
+    if (!table) return;
+    table->table_name = "";
+    destroyTableSchema(table->tableSchema);
 
-        TableRecord **tableRecords = (TableRecord**) malloc(sizeof(TableRecord*) * table->length);
-        TableRecord *current = table->firstTableRecord;
+    TableRecord **tableRecords = (TableRecord**) malloc(sizeof(TableRecord*) * table->length);
+    TableRecord *current = table->firstTableRecord;
 
-        for (size_t i = 0; i < table->length; i++, current = current->next_record) tableRecords[i] = current;
-        for (size_t i = 0; i < table->length; i++) destroyTableRecord(tableRecords[i]);
+    for (size_t i = 0; i < table->length; i++, current = current->next_record) tableRecords[i] = current;
+    for (size_t i = 0; i < table->length; i++) destroyTableRecord(tableRecords[i]);
 
-        free(tableRecords);
+    free(tableRecords);
 
-        table->length = 0;
-        table->firstTableRecord = NULL;
-        free(table);
-    }
+    table->length = 0;
+    table->firstTableRecord = NULL;
+    free(table);
 }
