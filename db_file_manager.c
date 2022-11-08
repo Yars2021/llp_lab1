@@ -67,27 +67,25 @@ char *getPageData(DataPage *dataPage)
 int getPageType(DataPage *dataPage)
 {
     if (!dataPage) return PAGE_CORRUPT_EXITCODE;
-    return dataPage->header.flags & 0b00000011;
+    return dataPage->header.flags & PAGE_TYPE_MASK;
 }
 
 int getPageStatus(DataPage *dataPage)
 {
     if (!dataPage) return PAGE_CORRUPT_EXITCODE;
-    return dataPage->header.flags & 0b10000000;
+    return dataPage->header.flags & PAGE_STATUS_MASK;
 }
 
 void updatePageType(DataPage *dataPage, u_int8_t new_type)
 {
     if (!dataPage) return;
-    dataPage->header.flags &= 0b11111100;
-    new_type &= 0b00000011;
-    dataPage->header.flags |= new_type;
+    dataPage->header.flags &= !PAGE_TYPE_MASK;
+    dataPage->header.flags |= (new_type & PAGE_TYPE_MASK);
 }
 
 void updatePageStatus(DataPage *dataPage, u_int8_t new_status)
 {
     if (!dataPage) return;
-    dataPage->header.flags &= 0b01111111;
-    new_status &= 0b10000000;
-    dataPage->header.flags |= new_status;
+    dataPage->header.flags &= !PAGE_STATUS_MASK;
+    dataPage->header.flags |= (new_status & PAGE_STATUS_MASK);
 }

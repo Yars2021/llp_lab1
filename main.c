@@ -41,14 +41,25 @@ void tableTest()
 
 }
 
-int main() {
-    DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
+int main()
+{
+    Field **fields = (Field**) malloc(sizeof(Field*) * 3);
 
-    dataPage->header.page_index = 0;
-    dataPage->header.data_size = 0;
-    dataPage->header.flags = 0b10001011;
+    fields[0] = createField("1", BOOLEAN);
+    fields[1] = createField("2", STRING);
+    fields[2] = createField("3", INTEGER);
 
+    TableSchema *tableSchema = createTableSchema(fields, 3, 1);
 
-    free(dataPage);
+    size_t i;
+    TableRecord *tableRecord = parseTableRecordJSON("{\"RECORD\":[\"123\",\"56asdhgasjh askda\",\"56765sadasd    asdlhas\"]}", 0, &i, tableSchema);
+
+    printf("%s\n", tableRecord->dataCells[0]);
+    printf("%s\n", tableRecord->dataCells[1]);
+    printf("%s\n", tableRecord->dataCells[2]);
+    printf("%s\n", transformTableRecordToJSON(tableRecord));
+
+    destroyTableSchema(tableSchema);
+    destroyTableRecord(tableRecord);
     return 0;
 }

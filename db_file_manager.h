@@ -19,6 +19,8 @@
 #define PAGE_TYPE_DATABASE_HEADER   0b00000010
 #define PAGE_STATUS_ACTIVE          0b00000000
 #define PAGE_STATUS_INACTIVE        0b10000000
+#define PAGE_TYPE_MASK              0b00000011
+#define PAGE_STATUS_MASK            0b10000000
 
 /*
  * DataPage flags:

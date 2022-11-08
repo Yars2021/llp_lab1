@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <regex.h>
 
 #define JSON_FIELD_NAME "F_NAME"
 #define JSON_FIELD_TYPE "F_TYPE"
@@ -74,14 +75,18 @@ typedef struct TableRecord {
 /// Creates a data cell from a string.
 char *createDataCell(const char *value);
 
+/// Creates a new string, which is the substring of the original one.
+char *substrToDataCell(const char *origin, size_t begin, size_t end);
+
 /// Creates an instance of a table record (next is NULL by default).
 TableRecord *createTableRecord(size_t length, char **dataCells);
 
 /// Returns a valid JSON string containing the record data.
 char *transformTableRecordToJSON(TableRecord *tableRecord);
 
-/// Creates a table record from a JSON line.
-TableRecord *parseTableRecordJSON(const char *line, size_t pos, TableSchema *tableSchema, size_t *new_index);
+/// Creates a table record from a JSON line following the provided TableSchema.
+/// Parses from pos and saves the ending index.
+TableRecord *parseTableRecordJSON(const char *line, size_t pos, size_t *ending_index, TableSchema *tableSchema);
 
 /// destroys the instance of table record.
 void destroyTableRecord(TableRecord *tableRecord);
@@ -102,11 +107,9 @@ Table *createTable(TableSchema *tableSchema, char *table_name);
 /// Adds a new line to the table.
 void insertTableRecord(Table *table, TableRecord *tableRecord);
 
-/// Returns a valid JSON string containing the table.
-char *transformTableToJSON(Table *table);
-
 /// Creates a table header from a JSON line.
-Table *parseTableHeaderJSON(const char *line, size_t pos, size_t *new_index);
+/// Parses from pos and saves the ending index.
+Table *parseTableHeaderJSON(const char *line, size_t pos, size_t *ending_index);
 
 /// Destroys the table instance.
 void destroyTable(Table *table);
