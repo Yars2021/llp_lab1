@@ -31,7 +31,7 @@ void writeDataPage(const char *filename, DataPage *dataPage)
 
     if (!file) return;
 
-    fseek(file, PAGE_SIZE * dataPage->header.page_number, SEEK_SET);
+    fseek(file, PAGE_SIZE * dataPage->header.page_index, SEEK_SET);
     fwrite(dataPage, sizeof(DataPage), 1, file);
 
     fclose(file);
@@ -62,4 +62,32 @@ char *getPageData(DataPage *dataPage)
 {
     if (!dataPage) return NULL;
     return &*(dataPage->page_data);
+}
+
+int getPageType(DataPage *dataPage)
+{
+    if (!dataPage) return PAGE_CORRUPT_EXITCODE;
+    return dataPage->header.flags & 0b00000011;
+}
+
+int getPageStatus(DataPage *dataPage)
+{
+    if (!dataPage) return PAGE_CORRUPT_EXITCODE;
+    return dataPage->header.flags & 0b10000000;
+}
+
+void updatePageType(DataPage *dataPage, u_int8_t new_type)
+{
+    if (!dataPage) return;
+    dataPage->header.flags &= 0b11111100;
+    new_type &= 0b00000011;
+    dataPage->header.flags |= new_type;
+}
+
+void updatePageStatus(DataPage *dataPage, u_int8_t new_status)
+{
+    if (!dataPage) return;
+    dataPage->header.flags &= 0b01111111;
+    new_status &= 0b10000000;
+    dataPage->header.flags |= new_status;
 }

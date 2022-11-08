@@ -44,27 +44,11 @@ void tableTest()
 int main() {
     DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
 
-    dataPage->header.page_number = 0;
+    dataPage->header.page_index = 0;
     dataPage->header.data_size = 0;
-    dataPage->header.flags = 1;
+    dataPage->header.flags = 0b10001011;
 
 
-    char **cells = (char**) malloc(sizeof(char*) * 3);
-
-    cells[0] = createDataCell("1asddas");
-    cells[1] = createDataCell("63raf-");
-    cells[2] = createDataCell("gы");
-
-    TableRecord *tableRecord = createTableRecord(3, cells);
-
-    updatePageData(dataPage, transformTableRecordToJSON(tableRecord));
-
-    destroyTableRecord(tableRecord);
-
-    writeDataPage("/home/yars/CLionProjects/llp_lab1_c/.database", dataPage);
-
-    printf("%hu\n", dataPage->header.data_size);
-    printf("%lu\n", strlen("{\"RECORD\":[\"1asddas\",\"63raf-\",\"gы\"]}") + 1);
-
+    free(dataPage);
     return 0;
 }

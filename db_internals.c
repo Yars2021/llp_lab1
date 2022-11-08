@@ -3,33 +3,11 @@
 //
 #include "db_internals.h"
 
-char *uint_to_str(unsigned int num)
-{
-    size_t length = 0;
-    char res[32];
-
-    do {
-        res[length] = num % 10 + '0';
-        length++;
-        num /= 10;
-    } while (num > 0);
-
-    char *rev_res = (char*) malloc(length + 1);
-
-    rev_res[length] = '\0';
-
-    for (size_t i = 0; i < length; i++) rev_res[i] = res[length - i - 1];
-
-    return rev_res;
-}
-
 Field *createField(char *field_name, FieldType fieldType)
 {
     Field *field = (Field*) malloc(sizeof(Field));
-
     field->field_name = field_name;
     field->fieldType = fieldType;
-
     return field;
 }
 
@@ -63,11 +41,10 @@ char *transformFieldToJSON(Field *field)
 
 void destroyField(Field *field)
 {
-    if (field) {
-        field->field_name = 0;
-        field->fieldType = INTEGER;
-        free(field);
-    }
+    if (!field) return;
+    field->field_name = 0;
+    field->fieldType = INTEGER;
+    free(field);
 }
 
 
@@ -143,7 +120,6 @@ char *createDataCell(const char *value)
     if (!value) return NULL;
 
     char *cell = (char*) malloc(strlen(value) + 1);
-
     memcpy(cell, value, strlen(value));
     cell[strlen(value)] = '\0';
 
@@ -184,7 +160,6 @@ char *transformTableRecordToJSON(TableRecord *tableRecord)
     record_data[tableRecord->length * 3 + cell_values_length - 1] = '\0';
 
     char *line = (char*) malloc(strlen("{'':[]}") + strlen(JSON_RECORD) + tableRecord->length * 3 + cell_values_length);
-
     sprintf(line, "{\"%s\":[%s]}", JSON_RECORD, record_data);
 
     free(record_data);
@@ -281,9 +256,8 @@ TableRecord *parseTableRecordJSON(const char *line, size_t pos, TableSchema *tab
 
         size_t begin_index, index = pos;
 
-        index += 2;
+        index += 4;
         index += strlen(JSON_RECORD);
-        index += 2;
 
         if (tableSchema->number_of_fields > 0) {
             dataCells = (char**) malloc(sizeof(char*) * tableSchema->number_of_fields);
