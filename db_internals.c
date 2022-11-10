@@ -13,7 +13,7 @@ Field *createField(char *field_name, FieldType fieldType)
 
 char *transformFieldToJSON(Field *field)
 {
-    /// {"F_NAME":"field->name","F_TYPE":"field->type"}
+    /// {"F_NAME":"","F_TYPE":""}
 
     if (!field) return "";
     char type, *line = (char*) malloc(strlen("{'':'','':''}") + strlen(JSON_FIELD_NAME) + strlen(JSON_FIELD_TYPE) + strlen(field->field_name) + 2);
@@ -34,6 +34,50 @@ char *transformFieldToJSON(Field *field)
     sprintf(line, "{\"%s\":\"%s\",\"%s\":\"%c\"}", JSON_FIELD_NAME, field->field_name, JSON_FIELD_TYPE, type);
 
     return line;
+}
+
+Field *parseFieldJSON(const char *line, size_t pos, size_t *ending_index)
+{
+    if (!line || pos >= strlen(line)) return NULL;
+
+    char *field_name_reg = "(.+?)", *field_type_reg = "(.)";
+    char *format = (char*) malloc(strlen("^\\{'':'(.+?)','':'(.)'\\}$") + strlen(JSON_FIELD_NAME) + strlen(JSON_FIELD_TYPE) + 1);
+    sprintf(format, "^\\{\"%s\":\"%s\",\"%s\":\"%s\"\\}$", JSON_FIELD_NAME, field_name_reg, JSON_FIELD_TYPE, field_type_reg);
+
+    regex_t regexp_rec;
+    regmatch_t groups[3];
+    int comp_ec, exec_ec;
+
+    comp_ec = regcomp(&regexp_rec, format, REG_EXTENDED);
+
+    if (comp_ec != REG_NOERROR) return NULL;
+
+    exec_ec = regexec(&regexp_rec, line + pos, 3, groups, 0);
+
+    if (exec_ec == REG_NOMATCH) return NULL;
+
+    Field *field = createField(substrToNewInstance(line, groups[1].rm_so, groups[1].rm_eo), STRING);
+
+    switch (line[groups[2].rm_so]) {
+        case 'I':
+            field->fieldType = INTEGER;
+            break;
+        case 'F':
+            field->fieldType = FLOAT;
+            break;
+        case 'B':
+            field->fieldType = BOOLEAN;
+            break;
+        default:
+            field->fieldType = STRING;
+            break;
+    }
+
+    free(format);
+
+    *ending_index = pos + strlen("{'':'','':''}") + strlen(JSON_FIELD_NAME) + strlen(JSON_FIELD_TYPE) + strlen(field->field_name) + 1;
+
+    return field;
 }
 
 void destroyField(Field *field)
@@ -93,6 +137,35 @@ char *transformTableSchemaToJSON(TableSchema *tableSchema)
     return line;
 }
 
+Field *parseTableSchemaJSON(const char *line, size_t pos, size_t *ending_index)
+{
+    if (!line || pos >= strlen(line)) return NULL;
+    // ToDo Add 2-level parsing (parse main attributes and all fields as 1 line, then parse the fields lines using the num_of_fields val
+    char *long_substr_reg = "(.+?)";
+    char *format = (char*) malloc(strlen("^\\{'':'','':''") + strlen(JSON_SCHEMA_KEY_I) + strlen(JSON_SCHEMA_NUM_OF_FIELDS) + strlen(long_substr_reg) * 2 + 1);
+    sprintf(format, "^\\{\"%s\":\"%s\",\"%s\":\"%s\"", JSON_SCHEMA_KEY_I, long_substr_reg, JSON_SCHEMA_NUM_OF_FIELDS, long_substr_reg);
+
+    regex_t regexp_rec;
+    regmatch_t groups[3];
+    int comp_ec, exec_ec;
+
+    comp_ec = regcomp(&regexp_rec, format, REG_EXTENDED);
+
+    if (comp_ec != REG_NOERROR) return NULL;
+
+    exec_ec = regexec(&regexp_rec, line + pos, 3, groups, 0);
+
+    if (exec_ec == REG_NOMATCH) return NULL;
+
+   // TableSchema *tableSchema = createTableSchema();
+
+    free(format);
+
+    *ending_index = pos;
+
+    return NULL;
+}
+
 void destroyTableSchema(TableSchema *tableSchema)
 {
     if (!tableSchema || !tableSchema->fields) return;
@@ -107,6 +180,7 @@ void destroyTableSchema(TableSchema *tableSchema)
 
     free(tableSchema);
 }
+
 
 char *substrToNewInstance(const char *origin, size_t begin, size_t end)
 {

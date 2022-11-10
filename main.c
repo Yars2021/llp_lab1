@@ -58,10 +58,15 @@ int main()
     printf("%s\n", tableRecord->dataCells[1]);
     printf("%s\n", tableRecord->dataCells[2]);
     printf("%s\n", transformTableRecordToJSON(tableRecord));
-
-    printf("%zd %zu\n\n", strlen("{\"RECORD\":[\"123\",\"22\",\"d\"]}"), i);
+    printf("%zd %zd\n", i, strlen(transformTableRecordToJSON(tableRecord)));
 
     destroyTableSchema(tableSchema);
     destroyTableRecord(tableRecord);
+
+    Field *field = parseFieldJSON("{\"F_NAME\":\"test name\",\"F_TYPE\":\"F\"}", 0, &i);
+
+    printf("%s\n%zd %zd\n", transformFieldToJSON(field), i, strlen(transformFieldToJSON(field)));
+
+    destroyField(field);
     return 0;
 }

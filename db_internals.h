@@ -42,6 +42,10 @@ Field *createField(char *field_name, FieldType fieldType);
 /// Returns a valid JSON string containing the field data.
 char *transformFieldToJSON(Field *field);
 
+/// Creates a field from a JSON line.
+/// Parses from pos and saves the ending index.
+Field *parseFieldJSON(const char *line, size_t pos, size_t *ending_index);
+
 /// Destroys the field instance.
 void destroyField(Field *field);
 
@@ -58,6 +62,10 @@ TableSchema *createTableSchema(Field **fields, size_t number_of_fields, size_t k
 
 /// Returns a valid JSON string containing the schema data.
 char *transformTableSchemaToJSON(TableSchema *tableSchema);
+
+/// Creates a table schema from a JSON line.
+/// Parses from pos and saves the ending index.
+Field *parseTableSchemaJSON(const char *line, size_t pos, size_t *ending_index);
 
 /// Destroys the schema instance.
 void destroyTableSchema(TableSchema *tableSchema);
