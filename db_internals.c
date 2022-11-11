@@ -209,6 +209,7 @@ TableSchema *parseTableSchemaJSON(const char *line, size_t pos, size_t *ending_i
     for (size_t i = 0; i < num_of_fields; i++) {
         fields[i] = parseFieldJSON(s_fields[i], 0, &f_ending_index);
         *ending_index += (f_ending_index + 1);
+        free(s_fields[i]);
     }
 
     (*ending_index) += (strlen("{'':'','':'','':[]}") + strlen(JSON_SCHEMA_KEY_I) + strlen(JSON_SCHEMA_NUM_OF_FIELDS) + strlen(JSON_SCHEMA_FIELDS));
