@@ -43,30 +43,12 @@ void tableTest()
 
 int main()
 {
-    Field **fields = (Field**) malloc(sizeof(Field*) * 3);
-
-    fields[0] = createField("1", BOOLEAN);
-    fields[1] = createField("2", STRING);
-    fields[2] = createField("3", INTEGER);
-
-    TableSchema *tableSchema = createTableSchema(fields, 3, 1);
-
+    char *line = "{\"KEY_COL_I\":\"0\",\"NUM_OF_FIELDS\":\"3\",\"FIELDS\":[{\"F_NAME\":\"Field\",\"F_TYPE\":\"B\"},{\"F_NAME\":\"f\",\"F_TYPE\":\"S\"},{\"F_NAME\":\"int\",\"F_TYPE\":\"I\"}]}";
     size_t i;
-    TableRecord *tableRecord = parseTableRecordJSON("{\"RECORD\":[\"123\",\"22\",\"d\"]}", 0, &i, tableSchema);
+    TableSchema *tableSchema = parseTableSchemaJSON(line, 0, &i);
 
-    printf("%s\n", tableRecord->dataCells[0]);
-    printf("%s\n", tableRecord->dataCells[1]);
-    printf("%s\n", tableRecord->dataCells[2]);
-    printf("%s\n", transformTableRecordToJSON(tableRecord));
-    printf("%zd %zd\n", i, strlen(transformTableRecordToJSON(tableRecord)));
+    printf("%s\n%zd\n%zd\n", transformTableSchemaToJSON(tableSchema), i, strlen(transformTableSchemaToJSON(tableSchema)));
 
     destroyTableSchema(tableSchema);
-    destroyTableRecord(tableRecord);
-
-    Field *field = parseFieldJSON("{\"F_NAME\":\"test name\",\"F_TYPE\":\"F\"}", 0, &i);
-
-    printf("%s\n%zd %zd\n", transformFieldToJSON(field), i, strlen(transformFieldToJSON(field)));
-
-    destroyField(field);
     return 0;
 }

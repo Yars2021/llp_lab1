@@ -36,6 +36,9 @@ typedef struct {
     FieldType fieldType;
 } Field;
 
+/// Converts a string into an unsigned int.
+size_t string_to_size_t(char *line);
+
 /// Creates a new instance of a field.
 Field *createField(char *field_name, FieldType fieldType);
 
@@ -65,7 +68,7 @@ char *transformTableSchemaToJSON(TableSchema *tableSchema);
 
 /// Creates a table schema from a JSON line.
 /// Parses from pos and saves the ending index.
-Field *parseTableSchemaJSON(const char *line, size_t pos, size_t *ending_index);
+TableSchema *parseTableSchemaJSON(const char *line, size_t pos, size_t *ending_index);
 
 /// Destroys the schema instance.
 void destroyTableSchema(TableSchema *tableSchema);

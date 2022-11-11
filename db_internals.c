@@ -3,6 +3,14 @@
 //
 #include "db_internals.h"
 
+size_t string_to_size_t(char *line)
+{
+    if (!line) return 0;
+    size_t num = 0;
+    for (size_t i = 0; i < strlen(line); i++, num *= 10) num += (line[i] - '0');
+    return num / 10;
+}
+
 Field *createField(char *field_name, FieldType fieldType)
 {
     Field *field = (Field*) malloc(sizeof(Field));
@@ -137,33 +145,84 @@ char *transformTableSchemaToJSON(TableSchema *tableSchema)
     return line;
 }
 
-Field *parseTableSchemaJSON(const char *line, size_t pos, size_t *ending_index)
+TableSchema *parseTableSchemaJSON(const char *line, size_t pos, size_t *ending_index)
 {
     if (!line || pos >= strlen(line)) return NULL;
-    // ToDo Add 2-level parsing (parse main attributes and all fields as 1 line, then parse the fields lines using the num_of_fields val
+
     char *long_substr_reg = "(.+?)";
-    char *format = (char*) malloc(strlen("^\\{'':'','':''") + strlen(JSON_SCHEMA_KEY_I) + strlen(JSON_SCHEMA_NUM_OF_FIELDS) + strlen(long_substr_reg) * 2 + 1);
-    sprintf(format, "^\\{\"%s\":\"%s\",\"%s\":\"%s\"", JSON_SCHEMA_KEY_I, long_substr_reg, JSON_SCHEMA_NUM_OF_FIELDS, long_substr_reg);
+    char *format = (char*) malloc(strlen("^\\{'':'','':'','':''\\}$") + strlen(JSON_SCHEMA_KEY_I) + strlen(JSON_SCHEMA_NUM_OF_FIELDS) +
+            strlen(JSON_SCHEMA_FIELDS) + strlen(long_substr_reg) * 3 + 1);
+    sprintf(format, "^\\{\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\\[%s\\]\\}$", JSON_SCHEMA_KEY_I, long_substr_reg, JSON_SCHEMA_NUM_OF_FIELDS, long_substr_reg,
+            JSON_SCHEMA_FIELDS, long_substr_reg);
 
     regex_t regexp_rec;
-    regmatch_t groups[3];
+    regmatch_t groups[4];
     int comp_ec, exec_ec;
 
     comp_ec = regcomp(&regexp_rec, format, REG_EXTENDED);
 
     if (comp_ec != REG_NOERROR) return NULL;
 
-    exec_ec = regexec(&regexp_rec, line + pos, 3, groups, 0);
+    exec_ec = regexec(&regexp_rec, line + pos, 4, groups, 0);
 
     if (exec_ec == REG_NOMATCH) return NULL;
 
-   // TableSchema *tableSchema = createTableSchema();
+    char *string_key_col_i = substrToNewInstance(line, groups[1].rm_so, groups[1].rm_eo);
+    char *string_num_of_fields = substrToNewInstance(line, groups[2].rm_so, groups[2].rm_eo);
+    char *string_fields = substrToNewInstance(line, groups[3].rm_so, groups[3].rm_eo);
+
+    size_t key_col_i = string_to_size_t(string_key_col_i);
+    size_t num_of_fields = string_to_size_t(string_num_of_fields);
+
+    if (num_of_fields == 0 || key_col_i >= num_of_fields) return NULL;
 
     free(format);
 
-    *ending_index = pos;
+    Field **fields = (Field**) malloc(sizeof(Field*) * num_of_fields);
+    char *field_reg = "(\\{.+?\\}),";
+    size_t index = 1;
 
-    return NULL;
+    char *fields_format = (char*) malloc(strlen(field_reg) * num_of_fields + 2);
+    sprintf(fields_format, "^");
+    for (size_t i = 0; i < num_of_fields; i++, index += strlen(field_reg)) memcpy(fields_format + index, field_reg, strlen(field_reg) + 1);
+    fields_format[index - 1] = '$';
+    fields_format[index] = '\0';
+
+    regex_t regexp_fields_rec;
+    regmatch_t fields_groups[num_of_fields + 1];
+    int comp_fields_ec, exec_fields_ec;
+
+    comp_fields_ec = regcomp(&regexp_fields_rec, fields_format, REG_EXTENDED);
+
+    if (comp_fields_ec != REG_NOERROR) return NULL;
+
+    exec_fields_ec = regexec(&regexp_fields_rec, string_fields, num_of_fields + 1, fields_groups, 0);
+
+    if (exec_fields_ec == REG_NOMATCH) return NULL;
+
+    char *s_fields[num_of_fields];
+    size_t f_ending_index = 0;
+    *ending_index = 0;
+
+    for (size_t i = 1; i < num_of_fields + 1; i++) s_fields[i - 1] = substrToNewInstance(string_fields, fields_groups[i].rm_so, fields_groups[i].rm_eo);
+
+    for (size_t i = 0; i < num_of_fields; i++) {
+        fields[i] = parseFieldJSON(s_fields[i], 0, &f_ending_index);
+        *ending_index += (f_ending_index + 1);
+    }
+
+    (*ending_index) += (strlen("{'':'','':'','':[]}") + strlen(JSON_SCHEMA_KEY_I) + strlen(JSON_SCHEMA_NUM_OF_FIELDS) + strlen(JSON_SCHEMA_FIELDS));
+    (*ending_index) += (strlen(string_key_col_i) + strlen(string_num_of_fields));
+    (*ending_index)--;
+
+    TableSchema *tableSchema = createTableSchema(fields, num_of_fields, key_col_i);
+
+    free(string_fields);
+    free(fields_format);
+    free(string_key_col_i);
+    free(string_num_of_fields);
+
+    return tableSchema;
 }
 
 void destroyTableSchema(TableSchema *tableSchema)
@@ -184,7 +243,7 @@ void destroyTableSchema(TableSchema *tableSchema)
 
 char *substrToNewInstance(const char *origin, size_t begin, size_t end)
 {
-    if (!origin || begin >= strlen(origin) || end >= strlen(origin) || begin >= end) return NULL;
+    if (!origin || begin >= strlen(origin) || end > strlen(origin) || begin >= end) return NULL;
 
     char *cell = (char*) malloc(end - begin + 1);
     memcpy(cell, origin + begin, end - begin);
