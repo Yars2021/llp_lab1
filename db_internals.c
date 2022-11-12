@@ -180,13 +180,13 @@ TableSchema *parseTableSchemaJSON(const char *line, size_t pos, size_t *ending_i
 
     Field **fields = (Field**) malloc(sizeof(Field*) * num_of_fields);
     char *field_reg = "(\\{.+?\\}),";
-    size_t index = 1;
+    size_t offset = 1;
 
     char *fields_format = (char*) malloc(strlen(field_reg) * num_of_fields + 2);
-    sprintf(fields_format, "^");
-    for (size_t i = 0; i < num_of_fields; i++, index += strlen(field_reg)) memcpy(fields_format + index, field_reg, strlen(field_reg) + 1);
-    fields_format[index - 1] = '$';
-    fields_format[index] = '\0';
+    fields_format[0] = '^';
+    for (size_t i = 0; i < num_of_fields; i++, offset += strlen(field_reg)) memcpy(fields_format + offset, field_reg, strlen(field_reg) + 1);
+    fields_format[offset - 1] = '$';
+    fields_format[offset] = '\0';
 
     regex_t regexp_fields_rec;
     regmatch_t fields_groups[num_of_fields + 1];
@@ -305,6 +305,44 @@ char *transformTableRecordToJSON(TableRecord *tableRecord)
     return line;
 }
 
+TableRecord *parseTableRecordJSON(const char *line, size_t pos, size_t *ending_index, TableSchema *tableSchema)
+{
+    if (!line || !tableSchema || tableSchema->number_of_fields == 0 || pos >= strlen(line)) return NULL;
+
+    char *arg_regexp = "\"(.+?)\",", *end_regexp = "\\]\\}$";
+    char *format = (char*) malloc(strlen("{'':[]}") + strlen(JSON_RECORD) + tableSchema->number_of_fields * strlen(arg_regexp) + 6);
+    sprintf(format, "^\\{\"%s\":\\[", JSON_RECORD);
+
+    size_t args_offset = strlen(format);
+    for (size_t i = 0; i < tableSchema->number_of_fields; i++) memcpy(format + args_offset + i * strlen(arg_regexp), arg_regexp, strlen(arg_regexp) + 1);
+    memcpy(format + strlen(format) - 1, end_regexp, strlen(end_regexp) + 1);
+
+    regex_t regexp_rec;
+    regmatch_t groups[tableSchema->number_of_fields + 1];
+    int comp_ec, exec_ec;
+
+    comp_ec = regcomp(&regexp_rec, format, REG_EXTENDED);
+
+    if (comp_ec != REG_NOERROR) return NULL;
+
+    exec_ec = regexec(&regexp_rec, line + pos, tableSchema->number_of_fields + 1, groups, 0);
+
+    if (exec_ec == REG_NOMATCH) return NULL;
+
+    char **cells = (char**) malloc(sizeof(char*) * tableSchema->number_of_fields);
+    for (size_t i = 1; i < tableSchema->number_of_fields + 1; i++) cells[i - 1] = substrToNewInstance(line,groups[i].rm_so,groups[i].rm_eo);
+
+    TableRecord *tableRecord = createTableRecord(tableSchema->number_of_fields, cells);
+
+    free(format);
+
+    *ending_index = pos + strlen("{'':[]}") + strlen(JSON_RECORD);
+    for (size_t i = 0; i < tableSchema->number_of_fields; i++) *ending_index += (strlen("'',") + strlen(cells[i]));
+    (*ending_index)--;
+
+    return tableRecord;
+}
+
 void destroyTableRecord(TableRecord *tableRecord)
 {
     if (!tableRecord || !tableRecord->dataCells) return;
@@ -353,44 +391,6 @@ void insertTableRecord(Table *table, TableRecord *tableRecord)
         table->firstTableRecord->prev_record = tableRecord;
         table->firstTableRecord = tableRecord;
     }
-}
-
-TableRecord *parseTableRecordJSON(const char *line, size_t pos, size_t *ending_index, TableSchema *tableSchema)
-{
-    if (!line || !tableSchema || tableSchema->number_of_fields == 0 || pos >= strlen(line)) return NULL;
-
-    char *arg_regexp = "\"(.+?)\",", *end_regexp = "\\]\\}$";
-    char *format = (char*) malloc(strlen("{'':[]}") + strlen(JSON_RECORD) + tableSchema->number_of_fields * strlen(arg_regexp) + 6);
-    sprintf(format, "^\\{\"%s\":\\[", JSON_RECORD);
-
-    size_t args_i = strlen(format);
-    for (size_t i = 0; i < tableSchema->number_of_fields; i++) memcpy(format + args_i + i * strlen(arg_regexp), arg_regexp, strlen(arg_regexp) + 1);
-    memcpy(format + strlen(format) - 1, end_regexp, strlen(end_regexp) + 1);
-
-    regex_t regexp_rec;
-    regmatch_t groups[tableSchema->number_of_fields + 1];
-    int comp_ec, exec_ec;
-
-    comp_ec = regcomp(&regexp_rec, format, REG_EXTENDED);
-
-    if (comp_ec != REG_NOERROR) return NULL;
-
-    exec_ec = regexec(&regexp_rec, line + pos, tableSchema->number_of_fields + 1, groups, 0);
-
-    if (exec_ec == REG_NOMATCH) return NULL;
-
-    char **cells = (char**) malloc(sizeof(char*) * tableSchema->number_of_fields);
-    for (size_t i = 1; i < tableSchema->number_of_fields + 1; i++) cells[i - 1] = substrToNewInstance(line,groups[i].rm_so,groups[i].rm_eo);
-
-    TableRecord *tableRecord = createTableRecord(tableSchema->number_of_fields, cells);
-
-    free(format);
-
-    *ending_index = pos + strlen("{'':[]}") + strlen(JSON_RECORD);
-    for (size_t i = 0; i < tableSchema->number_of_fields; i++) *ending_index += (strlen("'',") + strlen(cells[i]));
-    (*ending_index)--;
-
-    return tableRecord;
 }
 
 Table *parseTableHeaderJSON(const char *line, size_t pos, size_t *ending_index)
