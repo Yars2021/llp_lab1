@@ -16,10 +16,6 @@
 #define JSON_SCHEMA_NUM_OF_FIELDS "NUM_OF_FIELDS"
 #define JSON_SCHEMA_FIELDS "FIELDS"
 #define JSON_RECORD "RECORD"
-#define JSON_TABLE_NAME "TABLE_NAME"
-#define JSON_TABLE_SIZE "TABLE_SIZE"
-#define JSON_TABLE_SCHEMA "TABLE_SCHEMA"
-#define JSON_TABLE_DATA "TABLE_DATA"
 
 /// Types of fields in a table.
 typedef enum {
