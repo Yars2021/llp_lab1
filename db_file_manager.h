@@ -20,17 +20,20 @@
 #define PAGE_TYPE_TABLE_DATA        0b00000000
 #define PAGE_TYPE_TABLE_HEADER      0b00000001
 #define PAGE_TYPE_DATABASE_HEADER   0b00000010
-#define PAGE_STATUS_ACTIVE          0b00000000
-#define PAGE_STATUS_INACTIVE        0b10000000
+#define PAGE_STATUS_INACTIVE        0b00000000
+#define PAGE_STATUS_ACTIVE          0b10000000
 #define PAGE_TYPE_MASK              0b00000011
 #define PAGE_STATUS_MASK            0b10000000
+
+#define PAGE_SEARCH_FAILED 0
+#define PAGE_DB_ROOT_INDEX 0
 
 /*
  * DataPage flags:
  *
  * Counting from lowest to highest bits:
  * 0 and 1 bits - page type
- * 7 bit - page status
+ * 7 bit - page status (ACTIVE - page is currently used by the db, INACTIVE - free page)
  *
  *
  * Page types (M - the field is stored in the metadata):
@@ -44,10 +47,10 @@
  *          |                    | schema (2048 bytes) and
  *          |                    | data page indexes.
  * ---------------------------------------------------------------------------
- * 10       | DatabaseHeaderPage | Database header page,
+ * 10       | DatabaseHeaderPage | Database header page, contains
  *          |                    | number of pages (4 bytes) (M),
  *          |                    | number of tables (4 bytes) (M),
- *          |                    | contains db name (M) and first page
+ *          |                    | db name (M) and first page
  *          |                    | indexes for every table.
  */
 
@@ -69,10 +72,10 @@ typedef struct {
 } DataPage;
 
 /// Clears the page (does not affect its index).
-void clearPage(DataPage *dataPage);
+void freePage(DataPage *dataPage);
 
 /// Clears the page and all the related pages in the file.
-void clearPageThread(char *filename, size_t page_index);
+void freePageThread(char *filename, size_t page_index);
 
 /// Clears the database file.
 void freeDatabaseFile(const char *filename);
@@ -82,6 +85,10 @@ void createDatabasePage(const char *filename, const char *db_name);
 
 /// Appends a new empty page to the file.
 void expandDBFile(const char *filename);
+
+/// Returns the index of the closest free page starting from the starting_point.
+/// If such page cannot be found, it creates a new one.
+size_t findFreePageOrExpand(const char *filename, size_t starting_point);
 
 /// Extracts a DataPage by its number from a file and puts it into a struct.
 void readDataPage(const char *filename, DataPage *dataPage, size_t page_index);
@@ -105,6 +112,9 @@ void updateNumberOfPages(DataPage *dataPage, u_int32_t num);
 /// Updates the number of pages for the DB Header page (stored in the second 4 bytes of the metadata).
 void updateNumberOfTables(DataPage *dataPage, u_int32_t num);
 
+/// Updates the number of records for the Table Header page (stored in the first 8 bytes of the metadata).
+void updateTableLength(DataPage *dataPage, u_int64_t num);
+
 /// Returns a char pointer to the DataPages metadata.
 char *getPageMetadata(DataPage *dataPage);
 
@@ -120,6 +130,9 @@ int32_t getNumberOfPages(DataPage *dataPage);
 /// Returns the number of tables in the database.
 int32_t getNumberOfTables(DataPage *dataPage);
 
+/// Returns the length of the table.
+int64_t getTableLength(DataPage *dataPage);
+
 /// Returns the type of the DataPage or PAGE_CORRUPT_EXITCODE.
 int getPageType(DataPage *dataPage);
 
@@ -131,5 +144,11 @@ void updatePageType(DataPage *dataPage, u_int8_t new_type);
 
 /// Updates the DataPages status.
 void updatePageStatus(DataPage *dataPage, u_int8_t new_status);
+
+/// Adds a new table header to the file.
+void addTableHeader(const char *filename, Table *table);
+
+/// Finds first table page by table name.
+size_t findTable(const char *filename, const char *table_name);
 
 #endif //LLP_LAB1_C_DB_FILE_MANAGER_H

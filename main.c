@@ -36,5 +36,8 @@ void recordTest()
 int main()
 {
     createDatabasePage(PATH, "TestDB");
+    size_t page;
+    page = findFreePageOrExpand(PATH, 0);
+    printf("%zd\n", page);
     return 0;
 }

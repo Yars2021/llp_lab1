@@ -9,17 +9,18 @@ size_t min_size(size_t a, size_t b)
     return a < b ? a : b;
 }
 
-void clearPage(DataPage *dataPage)
+void freePage(DataPage *dataPage)
 {
     if (!dataPage) return;
     dataPage->header.flags = 0;
     dataPage->header.next_related_page = dataPage->header.page_index;
     dataPage->header.data_size = 0;
+    updatePageStatus(dataPage, PAGE_STATUS_INACTIVE);
     memset(dataPage->header.metadata,'\0',PAGE_METADATA_SIZE + 1);
     memset(dataPage->page_data,'\0',PAGE_DATA_SIZE + 1);
 }
 
-void clearPageThread(char *filename, size_t page_index)
+void freePageThread(char *filename, size_t page_index)
 {
     uint64_t current = page_index, last = current + 1;
     while (current != last) {
@@ -27,7 +28,7 @@ void clearPageThread(char *filename, size_t page_index)
         DataPage *dataPage = (DataPage *) malloc(sizeof(DataPage));
         readDataPage(filename, dataPage, current);
         current = dataPage->header.next_related_page;
-        clearPage(dataPage);
+        freePage(dataPage);
         writeDataPage(filename, dataPage);
         free(dataPage);
     }
@@ -59,7 +60,7 @@ void expandDBFile(const char *filename)
 {
     if (!filename) return;
     DataPage *dbHeaderPage = (DataPage*) malloc(sizeof(DataPage));
-    readDataPage(filename, dbHeaderPage, 0);
+    readDataPage(filename, dbHeaderPage, PAGE_DB_ROOT_INDEX);
     int32_t index = getNumberOfPages(dbHeaderPage);
     if (index != PAGE_CORRUPT_EXITCODE) updateNumberOfPages(dbHeaderPage, index + 1);
     writeDataPage(filename, dbHeaderPage);
@@ -71,9 +72,31 @@ void expandDBFile(const char *filename)
         newPage->header.page_index = index;
         newPage->header.next_related_page = newPage->header.page_index;
         newPage->header.data_size = 0;
+        updatePageStatus(newPage, PAGE_STATUS_INACTIVE);
         writeDataPage(filename, newPage);
         free(newPage);
     }
+}
+
+size_t findFreePageOrExpand(const char *filename, size_t starting_point)
+{
+    if (!filename) return PAGE_SEARCH_FAILED;
+    DataPage *dbHeaderPage = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, dbHeaderPage, PAGE_DB_ROOT_INDEX);
+    size_t max_index = getNumberOfPages(dbHeaderPage), found = 0;
+    free(dbHeaderPage);
+
+    for (size_t current = starting_point; current < max_index && !found; current++) {
+        DataPage *dataPage = (DataPage *) malloc(sizeof(DataPage));
+        readDataPage(filename, dataPage, current);
+        if (getPageStatus(dataPage) == PAGE_STATUS_INACTIVE) found = current;
+        free(dataPage);
+    }
+
+    if (found) return found;
+
+    expandDBFile(filename);
+    return max_index;
 }
 
 void readDataPage(const char *filename, DataPage *dataPage, size_t page_index)
@@ -136,6 +159,12 @@ void updateNumberOfTables(DataPage *dataPage, u_int32_t num)
     *(u_int32_t*)(dataPage->header.metadata + sizeof(u_int32_t)) = num;
 }
 
+void updateTableLength(DataPage *dataPage, u_int64_t num)
+{
+    if (!dataPage) return;
+    *(u_int64_t*)(dataPage->header.metadata) = num;
+}
+
 char *getPageMetadata(DataPage *dataPage)
 {
     if (!dataPage) return NULL;
@@ -166,6 +195,12 @@ int32_t getNumberOfTables(DataPage *dataPage)
     return *(int32_t*)(dataPage->header.metadata + sizeof(u_int32_t));
 }
 
+int64_t getTableLength(DataPage *dataPage)
+{
+    if (!dataPage) return PAGE_CORRUPT_EXITCODE;
+    return *(int64_t*)(dataPage->header.metadata);
+}
+
 int getPageType(DataPage *dataPage)
 {
     if (!dataPage) return PAGE_CORRUPT_EXITCODE;
@@ -190,4 +225,21 @@ void updatePageStatus(DataPage *dataPage, u_int8_t new_status)
     if (!dataPage) return;
     dataPage->header.flags &= ~PAGE_STATUS_MASK;
     dataPage->header.flags |= (new_status & PAGE_STATUS_MASK);
+}
+
+void addTableHeader(const char *filename, Table *table)
+{
+    if (!filename || !table) return;
+    size_t page_index = findFreePageOrExpand(filename, PAGE_DB_ROOT_INDEX);
+    if (page_index == PAGE_SEARCH_FAILED) return;
+
+    DataPage *foundPage = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, foundPage, page_index);
+    // ToDo add TableHeader filling
+    free(foundPage);
+}
+
+size_t findTable(const char *filename, const char *table_name)
+{
+    if (!filename || !table_name) return PAGE_SEARCH_FAILED;
 }
