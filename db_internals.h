@@ -118,10 +118,6 @@ Table *createTable(TableSchema *tableSchema, char *table_name);
 /// Adds a new line to the table.
 void insertTableRecord(Table *table, TableRecord *tableRecord);
 
-/// Creates a table header from a JSON line.
-/// Parses from pos and saves the ending index.
-Table *parseTableHeaderJSON(const char *line, size_t pos, size_t *ending_index);
-
 /// Destroys the table instance.
 void destroyTable(Table *table);
 

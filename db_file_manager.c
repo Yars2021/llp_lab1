@@ -9,6 +9,27 @@ size_t min_size(size_t a, size_t b)
     return a < b ? a : b;
 }
 
+void freeDatabaseFile(const char *filename)
+{
+    FILE *file = fopen(filename, "w");
+    fclose(file);
+}
+
+void createDatabase(const char *filename, const char *db_name)
+{
+    if (strlen(db_name) >= PAGE_DB_HEADER_MD_SIZE) return;
+    DataPage *dbHeaderPage = (DataPage*) malloc(sizeof(DataPage));
+    freeDatabaseFile(filename);
+    dbHeaderPage->header.page_index = 0;
+    dbHeaderPage->header.next_related_page = 0;
+    updatePageType(dbHeaderPage, PAGE_TYPE_DATABASE_HEADER);
+    updateNumberOfPages(dbHeaderPage, 1);
+    updateNumberOfTables(dbHeaderPage, 0);
+    updateDBHeaderPageMetadata(dbHeaderPage, db_name);
+    writeDataPage(filename, dbHeaderPage);
+    free(dbHeaderPage);
+}
+
 void readDataPage(const char *filename, DataPage *dataPage, size_t page_number)
 {
     if (!filename || !dataPage) return;
@@ -19,7 +40,6 @@ void readDataPage(const char *filename, DataPage *dataPage, size_t page_number)
 
     fseek(file, PAGE_SIZE * page_number, SEEK_SET);
     fread(dataPage, sizeof(DataPage), 1, file);
-
     fclose(file);
 }
 
@@ -33,23 +53,41 @@ void writeDataPage(const char *filename, DataPage *dataPage)
 
     fseek(file, PAGE_SIZE * dataPage->header.page_index, SEEK_SET);
     fwrite(dataPage, sizeof(DataPage), 1, file);
-
     fclose(file);
 }
 
 void updatePageMetadata(DataPage *dataPage, const char *metadata)
 {
     if (!dataPage || !metadata) return;
-    memset(dataPage->header.metadata,'\0',PAGE_METADATA_SIZE - 1);
-    memcpy(dataPage->header.metadata, metadata, min_size(strlen(metadata), PAGE_METADATA_SIZE - 1));
+    memset(dataPage->header.metadata,'\0',PAGE_METADATA_SIZE + 1);
+    memcpy(dataPage->header.metadata, metadata, min_size(strlen(metadata), PAGE_METADATA_SIZE));
 }
 
 void updatePageData(DataPage *dataPage, const char *data)
 {
     if (!dataPage || !data) return;
-    memset(dataPage->page_data,'\0',PAGE_SIZE - PAGE_HEADER_SIZE - 1);
-    memcpy(dataPage->page_data, data, min_size(strlen(data), PAGE_SIZE - PAGE_HEADER_SIZE - 1));
-    dataPage->header.data_size = min_size(strlen(data), PAGE_SIZE - PAGE_HEADER_SIZE - 1) + 1;
+    memset(dataPage->page_data,'\0',PAGE_DATA_SIZE + 1);
+    memcpy(dataPage->page_data, data, min_size(strlen(data), PAGE_DATA_SIZE));
+    dataPage->header.data_size = min_size(strlen(data), PAGE_DATA_SIZE);
+}
+
+void updateDBHeaderPageMetadata(DataPage *dataPage, const char *metadata)
+{
+    if (!dataPage || !metadata) return;
+    memset(dataPage->header.metadata + sizeof(u_int32_t) * 2,'\0',PAGE_DB_HEADER_MD_SIZE + 1);
+    memcpy(dataPage->header.metadata + sizeof(u_int32_t) * 2, metadata, min_size(strlen(metadata), PAGE_DB_HEADER_MD_SIZE));
+}
+
+void updateNumberOfPages(DataPage *dataPage, u_int32_t num)
+{
+    if (!dataPage) return;
+    *(u_int32_t*)(dataPage->header.metadata) = num;
+}
+
+void updateNumberOfTables(DataPage *dataPage, u_int32_t num)
+{
+    if (!dataPage) return;
+    *(u_int32_t*)(dataPage->header.metadata + sizeof(u_int32_t)) = num;
 }
 
 char *getPageMetadata(DataPage *dataPage)
@@ -62,6 +100,12 @@ char *getPageData(DataPage *dataPage)
 {
     if (!dataPage) return NULL;
     return &*(dataPage->page_data);
+}
+
+char *getDBHeaderPageMetadata(DataPage *dataPage)
+{
+    if (!dataPage) return NULL;
+    return &*(dataPage->header.metadata + sizeof(u_int32_t) * 2);
 }
 
 int getPageType(DataPage *dataPage)

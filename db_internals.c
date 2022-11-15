@@ -393,12 +393,6 @@ void insertTableRecord(Table *table, TableRecord *tableRecord)
     }
 }
 
-Table *parseTableHeaderJSON(const char *line, size_t pos, size_t *ending_index)
-{
-    if (!line) return NULL;
-    // ToDo Write implementation
-}
-
 void destroyTable(Table *table)
 {
     if (!table) return;

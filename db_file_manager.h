@@ -11,7 +11,9 @@
 
 #define PAGE_SIZE 4096
 #define PAGE_HEADER_SIZE 256
-#define PAGE_METADATA_SIZE 235
+#define PAGE_METADATA_SIZE 236
+#define PAGE_DB_HEADER_MD_SIZE 228
+#define PAGE_DATA_SIZE 3839
 
 #define PAGE_CORRUPT_EXITCODE       (-1)
 #define PAGE_TYPE_TABLE_DATA        0b00000000
@@ -37,10 +39,13 @@
  * 00       | TableDataPage      | Table data page, contains records.
  * ---------------------------------------------------------------------------
  * 01       | TableHeaderPage    | Table header page, contains table name (M),
- *          |                    | schema, length and data page indexes.
+ *          |                    | length (8 bytes), schema (2048 bytes) and
+ *          |                    | data page indexes.
  * ---------------------------------------------------------------------------
- * 10       | DatabaseHeaderPage | Database header page, contains db name (M),
- *          |                    | number of tables and first page
+ * 10       | DatabaseHeaderPage | Database header page,
+ *          |                    | number of pages (4 bytes) (M),
+ *          |                    | number of tables (4 bytes) (M),
+ *          |                    | contains db name (M) and first page
  *          |                    | indexes for every table.
  */
 
@@ -60,6 +65,12 @@ typedef struct {
     char page_data[PAGE_SIZE - PAGE_HEADER_SIZE];
 } DataPage;
 
+/// Clears the database file.
+void freeDatabaseFile(const char *filename);
+
+/// Creates the DatabaseHeaderPage and places it in the file.
+void createDatabase(const char *filename, const char *db_name);
+
 /// Extracts a DataPage by its number from a file and puts it into a struct.
 void readDataPage(const char *filename, DataPage *dataPage, size_t page_number);
 
@@ -72,11 +83,24 @@ void updatePageMetadata(DataPage *dataPage, const char *metadata);
 /// Updates the data of the DataPage.
 void updatePageData(DataPage *dataPage, const char *data);
 
+/// Updates the metadata without affecting the first 8 bytes, which store 2 additional fields
+/// if the page is a DB Header.
+void updateDBHeaderPageMetadata(DataPage *dataPage, const char *metadata);
+
+/// Updates the number of pages for the DB Header page (stored in the first 4 bytes of the metadata).
+void updateNumberOfPages(DataPage *dataPage, u_int32_t num);
+
+/// Updates the number of pages for the DB Header page (stored in the second 4 bytes of the metadata).
+void updateNumberOfTables(DataPage *dataPage, u_int32_t num);
+
 /// Returns a char pointer to the DataPages metadata.
 char *getPageMetadata(DataPage *dataPage);
 
 /// Returns a char pointer to the DataPages data.
 char *getPageData(DataPage *dataPage);
+
+/// Returns a char pointer to the DB Header pages metadata.
+char *getDBHeaderPageMetadata(DataPage *dataPage);
 
 /// Returns the type of the DataPage or PAGE_CORRUPT_EXITCODE.
 int getPageType(DataPage *dataPage);
