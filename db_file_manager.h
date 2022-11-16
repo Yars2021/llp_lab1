@@ -28,6 +28,8 @@
 #define PAGE_SEARCH_FAILED 0
 #define PAGE_DB_ROOT_INDEX 0
 
+#define SEARCH_TABLE_NOT_FOUND 0
+
 /*
  * DataPage flags:
  *
@@ -43,9 +45,7 @@
  * 00       | TableDataPage      | Table data page, contains records.
  * ---------------------------------------------------------------------------
  * 01       | TableHeaderPage    | Table header page, contains table name (M),
- *          |                    | length (8 bytes) (M),
- *          |                    | schema (2048 bytes) and
- *          |                    | data page indexes.
+ *          |                    | length (8 bytes) (M) and table schema.
  * ---------------------------------------------------------------------------
  * 10       | DatabaseHeaderPage | Database header page, contains
  *          |                    | number of pages (4 bytes) (M),
@@ -145,10 +145,13 @@ void updatePageType(DataPage *dataPage, u_int8_t new_type);
 /// Updates the DataPages status.
 void updatePageStatus(DataPage *dataPage, u_int8_t new_status);
 
-/// Adds a new table header to the file.
+/// Appends a line to the page.
+void appendData(DataPage *dataPage, const char *line);
+
+/// Adds a new table header to the file and creates a link for it in the root page.
 void addTableHeader(const char *filename, Table *table);
 
 /// Finds first table page by table name.
-size_t findTable(const char *filename, const char *table_name);
+size_t findTablePage(const char *filename, const char *table_name);
 
 #endif //LLP_LAB1_C_DB_FILE_MANAGER_H

@@ -411,3 +411,68 @@ void destroyTable(Table *table)
     table->firstTableRecord = NULL;
     free(table);
 }
+
+
+TableLink *createTableLink(char *table_name, size_t link)
+{
+    if (!table_name) return NULL;
+    TableLink *tableLink = (TableLink*) malloc(sizeof(TableLink));
+    tableLink->table_name = table_name;
+    tableLink->link = link;
+    return tableLink;
+}
+
+char *transformTableLinkToJSON(TableLink *tableLink)
+{
+    /// {"T_NAME":"","T_LINK":""}
+
+    if (!tableLink) return "";
+    char *line = (char*) malloc(strlen("{'':'','':''}") + strlen(JSON_TABLE_NAME) + strlen(JSON_TABLE_LINK) + strlen(tableLink->table_name) + 49);
+    sprintf(line, "{\"%s\":\"%s\",\"%s\":\"%zd\"}", JSON_TABLE_NAME, tableLink->table_name, JSON_TABLE_LINK, tableLink->link);
+
+    return line;
+}
+
+TableLink *parseTableLinkJSON(const char *line, size_t pos, size_t *ending_index)
+{
+    if (!line || pos >= strlen(line)) return NULL;
+
+    char *substring_reg = "(.+?)";
+    char *format = (char*) malloc(strlen("^\\{'':'(.+?)','':'(.+?)'\\}$") + strlen(JSON_TABLE_NAME) + strlen(JSON_TABLE_LINK) + 1);
+    sprintf(format, "^\\{\"%s\":\"%s\",\"%s\":\"%s\"\\}$", JSON_TABLE_NAME, substring_reg, JSON_TABLE_LINK, substring_reg);
+
+    regex_t regexp_rec;
+    regmatch_t groups[3];
+    int comp_ec, exec_ec;
+
+    comp_ec = regcomp(&regexp_rec, format, REG_EXTENDED);
+
+    if (comp_ec != REG_NOERROR) return NULL;
+
+    exec_ec = regexec(&regexp_rec, line + pos, 3, groups, 0);
+
+    if (exec_ec == REG_NOMATCH) return NULL;
+
+    TableLink *tableLink = createTableLink(substrToNewInstance(line, groups[1].rm_so, groups[1].rm_eo), 0);
+
+    char *string_link = substrToNewInstance(line, groups[2].rm_so, groups[2].rm_eo);
+    size_t link = 0;
+    for (size_t i = 0; i < strlen(string_link); i++, link *= 10) link += (string_link[i] - '0');
+    link /= 10;
+    free(format);
+
+    tableLink->link = link;
+
+    *ending_index = pos + strlen("{'':'','':''}") + strlen(JSON_TABLE_NAME) + strlen(JSON_TABLE_LINK) + strlen(tableLink->table_name) + strlen(string_link);
+
+    free(string_link);
+
+    return tableLink;
+}
+
+void destroyTableLink(TableLink *tableLink)
+{
+    if (!tableLink) return;
+    tableLink->link = 0;
+    free(tableLink);
+}

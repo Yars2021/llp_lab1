@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "db_file_manager.h"
 
-#define PATH "/home/yars/CLionProjects/llp_lab1_c/.database"
+#define TARGET_FILE "/home/yars/CLionProjects/llp_lab1_c/.database"
 
 void schemaTest()
 {
@@ -35,9 +35,19 @@ void recordTest()
 
 int main()
 {
-    createDatabasePage(PATH, "TestDB");
-    size_t page;
-    page = findFreePageOrExpand(PATH, 0);
-    printf("%zd\n", page);
+    createDatabasePage(TARGET_FILE, "Test DB");
+    DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(TARGET_FILE, dataPage, 0);
+    updatePageData(dataPage, "DATA");
+    appendData(dataPage, "APPENDING this data 12421421412");
+    appendData(dataPage, "MORE1");
+    appendData(dataPage, "MORE2");
+    appendData(dataPage, "MORE3");
+    appendData(dataPage, "MORE4");
+    appendData(dataPage, "MORE5");
+    appendData(dataPage, "MORE6");
+    appendData(dataPage, "MORE7");
+    writeDataPage(TARGET_FILE, dataPage);
+    free(dataPage);
     return 0;
 }

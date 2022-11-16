@@ -227,19 +227,65 @@ void updatePageStatus(DataPage *dataPage, u_int8_t new_status)
     dataPage->header.flags |= (new_status & PAGE_STATUS_MASK);
 }
 
+void appendData(DataPage *dataPage, const char *line)
+{
+    if (!dataPage || !line) return;
+    if (dataPage->header.data_size + 1 + strlen(line) > PAGE_DATA_SIZE) return;
+    if (dataPage->header.data_size == 0) updatePageData(dataPage, line);
+    else {
+        memcpy(getPageData(dataPage) + dataPage->header.data_size + 1, line, strlen(line) + 1);
+        dataPage->header.data_size += (strlen(line) + 1);
+    }
+}
+
 void addTableHeader(const char *filename, Table *table)
 {
-    if (!filename || !table) return;
+    if (!filename || !table || !table->tableSchema) return;
     size_t page_index = findFreePageOrExpand(filename, PAGE_DB_ROOT_INDEX);
     if (page_index == PAGE_SEARCH_FAILED) return;
 
     DataPage *foundPage = (DataPage*) malloc(sizeof(DataPage));
     readDataPage(filename, foundPage, page_index);
-    // ToDo add TableHeader filling
+    updateTableLength(foundPage, table->length);
+    updateHeaderPageMetadata(foundPage, table->table_name);
+    updatePageType(foundPage, PAGE_TYPE_TABLE_HEADER);
+    updatePageStatus(foundPage, PAGE_STATUS_ACTIVE);
+
+    char *serialized_schema = transformTableSchemaToJSON(table->tableSchema);
+    if (strlen(serialized_schema) <= PAGE_DATA_SIZE) updatePageData(foundPage, serialized_schema);
+    free(serialized_schema);
+
+    writeDataPage(filename, foundPage);
     free(foundPage);
+
+    DataPage *dbHeaderPage = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, dbHeaderPage, PAGE_DB_ROOT_INDEX);
+    // ToDo add TableLink insertion
+    // ToDo add Page Thread writing
+    free(dbHeaderPage);
 }
 
-size_t findTable(const char *filename, const char *table_name)
+size_t findTablePage(const char *filename, const char *table_name)
 {
+    // ToDo Rewrite using the info from the root page
     if (!filename || !table_name) return PAGE_SEARCH_FAILED;
+    DataPage *dbHeaderPage = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, dbHeaderPage, PAGE_DB_ROOT_INDEX);
+    size_t max_index = getNumberOfPages(dbHeaderPage), found = 0;
+    free(dbHeaderPage);
+
+    for (size_t current = PAGE_DB_ROOT_INDEX; current < max_index && !found; current++) {
+        DataPage *foundPage = (DataPage*) malloc(sizeof(DataPage));
+        readDataPage(filename, foundPage, current);
+
+        if (getPageType(foundPage) == PAGE_TYPE_TABLE_HEADER && getPageStatus(foundPage) == PAGE_STATUS_ACTIVE)
+            if (strcmp(getHeaderPageMetadata(foundPage), table_name) == 0)
+                found = current;
+
+        free(foundPage);
+    }
+
+    if (!found) return SEARCH_TABLE_NOT_FOUND;
+
+    return found;
 }

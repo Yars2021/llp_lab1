@@ -16,6 +16,8 @@
 #define JSON_SCHEMA_NUM_OF_FIELDS "NUM_OF_FIELDS"
 #define JSON_SCHEMA_FIELDS "FIELDS"
 #define JSON_RECORD "RECORD"
+#define JSON_TABLE_NAME "T_NAME"
+#define JSON_TABLE_LINK "T_LINK"
 
 /// Types of fields in a table.
 typedef enum {
@@ -116,5 +118,25 @@ void insertTableRecord(Table *table, TableRecord *tableRecord);
 
 /// Destroys the table instance.
 void destroyTable(Table *table);
+
+
+/// Contains table name and its location.
+typedef struct {
+    char *table_name;
+    size_t link;
+} TableLink;
+
+/// Creates a new instance of TableLink.
+TableLink *createTableLink(char *table_name, size_t link);
+
+/// Returns a valid JSON string containing the TableLink data.
+char *transformTableLinkToJSON(TableLink *tableLink);
+
+/// Creates a TableLink from a JSON line.
+/// Parses from pos and saves the ending index.
+TableLink *parseTableLinkJSON(const char *line, size_t pos, size_t *ending_index);
+
+/// Destroys the TableLink instance.
+void destroyTableLink(TableLink *tableLink);
 
 #endif //LLP_LAB1_C_DB_INTERNALS_H
