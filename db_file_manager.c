@@ -22,10 +22,10 @@ void freePage(DataPage *dataPage)
 
 void freePageThread(char *filename, size_t page_index)
 {
-    uint64_t current = page_index, last = current + 1;
-    while (current != last) {
+    if (!filename) return;
+    for (uint64_t current = page_index, last = current + 1; current != last;) {
         last = current;
-        DataPage *dataPage = (DataPage *) malloc(sizeof(DataPage));
+        DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
         readDataPage(filename, dataPage, current);
         current = dataPage->header.next_related_page;
         freePage(dataPage);
@@ -68,6 +68,7 @@ void expandDBFile(const char *filename)
 
     if (index != PAGE_CORRUPT_EXITCODE) {
         DataPage *newPage = (DataPage*) malloc(sizeof(DataPage));
+        freePage(newPage);
         newPage->header.flags = 0;
         newPage->header.page_index = index;
         newPage->header.next_related_page = newPage->header.page_index;
@@ -76,6 +77,45 @@ void expandDBFile(const char *filename)
         writeDataPage(filename, newPage);
         free(newPage);
     }
+}
+
+size_t expandPageThread(const char *filename, size_t page_index)
+{
+    if (!filename) return PAGE_SEARCH_FAILED;
+
+    uint64_t current = page_index;
+
+    for (uint64_t last = current + 1; current != last;) {
+        last = current;
+        DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
+        readDataPage(filename, dataPage, current);
+        current = dataPage->header.next_related_page;
+        free(dataPage);
+    }
+
+    size_t thread_tail_index = current, new_page_index = findFreePageOrExpand(filename, PAGE_DB_ROOT_INDEX);
+    u_int8_t flags;
+
+    if (new_page_index == PAGE_SEARCH_FAILED) return PAGE_SEARCH_FAILED;
+
+    DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, dataPage, thread_tail_index);
+    dataPage->header.page_index = thread_tail_index;
+    dataPage->header.next_related_page = new_page_index;
+    flags = dataPage->header.flags;
+    writeDataPage(filename, dataPage);
+    free(dataPage);
+
+    DataPage *newDataPage = (DataPage*) malloc(sizeof(DataPage));
+    freePage(newDataPage);
+    newDataPage->header.flags = flags;
+    newDataPage->header.page_index = new_page_index;
+    newDataPage->header.next_related_page = newDataPage->header.page_index;
+    newDataPage->header.data_size = 0;
+    writeDataPage(filename, newDataPage);
+    free(newDataPage);
+
+    return new_page_index;
 }
 
 size_t findFreePageOrExpand(const char *filename, size_t starting_point)
@@ -235,6 +275,32 @@ void appendData(DataPage *dataPage, const char *line)
     else {
         memcpy(getPageData(dataPage) + dataPage->header.data_size + 1, line, strlen(line) + 1);
         dataPage->header.data_size += (strlen(line) + 1);
+    }
+}
+
+void appendDataOrExpandThread(const char *filename, size_t page_index, const char *line)
+{
+    if (!line || strlen(line) > PAGE_DATA_SIZE) return;
+
+    DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, dataPage, page_index);
+    size_t data_size = dataPage->header.data_size;
+    free(dataPage);
+
+    if ((data_size + 1 + strlen(line)) <= PAGE_DATA_SIZE) {
+        dataPage = (DataPage*) malloc(sizeof(DataPage));
+        readDataPage(filename, dataPage, page_index);
+        appendData(dataPage, line);
+        writeDataPage(filename, dataPage);
+        free(dataPage);
+    } else {
+        size_t new_page = expandPageThread(filename, page_index);
+        if (new_page == PAGE_SEARCH_FAILED) return;
+        DataPage *newPage = (DataPage*) malloc(sizeof(DataPage));
+        readDataPage(filename, newPage, new_page);
+        appendData(newPage, line);
+        writeDataPage(filename, newPage);
+        free(newPage);
     }
 }
 

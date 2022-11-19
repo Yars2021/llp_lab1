@@ -35,19 +35,25 @@ void recordTest()
 
 int main()
 {
+    freeDatabaseFile(TARGET_FILE);
     createDatabasePage(TARGET_FILE, "Test DB");
     DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
-    readDataPage(TARGET_FILE, dataPage, 0);
-    updatePageData(dataPage, "DATA");
-    appendData(dataPage, "APPENDING this data 12421421412");
-    appendData(dataPage, "MORE1");
-    appendData(dataPage, "MORE2");
-    appendData(dataPage, "MORE3");
-    appendData(dataPage, "MORE4");
-    appendData(dataPage, "MORE5");
-    appendData(dataPage, "MORE6");
-    appendData(dataPage, "MORE7");
+    readDataPage(TARGET_FILE, dataPage, PAGE_DB_ROOT_INDEX);
+    appendData(dataPage, "DATA DATA");
     writeDataPage(TARGET_FILE, dataPage);
     free(dataPage);
+
+    #define len 3838
+    char line[len];
+    for (size_t i = 0; i < len; i++) line[i] = 'O';
+
+    appendDataOrExpandThread(TARGET_FILE, PAGE_DB_ROOT_INDEX, line);
+    appendDataOrExpandThread(TARGET_FILE, PAGE_DB_ROOT_INDEX, "SOMETHING relatively short");
+
+    char line2[len];
+    for (size_t i = 0; i < len; i++) line2[i] = 'L';
+
+    appendDataOrExpandThread(TARGET_FILE, PAGE_DB_ROOT_INDEX, line2);
+    appendDataOrExpandThread(TARGET_FILE, PAGE_DB_ROOT_INDEX, "SOMETHING relatively short AGAIN");
     return 0;
 }

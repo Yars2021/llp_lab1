@@ -86,6 +86,9 @@ void createDatabasePage(const char *filename, const char *db_name);
 /// Appends a new empty page to the file.
 void expandDBFile(const char *filename);
 
+/// Appends a page to a page thread linking it to the previous one. Returns the new page index.
+size_t expandPageThread(const char *filename, size_t page_index);
+
 /// Returns the index of the closest free page starting from the starting_point.
 /// If such page cannot be found, it creates a new one.
 size_t findFreePageOrExpand(const char *filename, size_t starting_point);
@@ -147,6 +150,10 @@ void updatePageStatus(DataPage *dataPage, u_int8_t new_status);
 
 /// Appends a line to the page.
 void appendData(DataPage *dataPage, const char *line);
+
+/// Appends a line to the page in file.
+/// If there is not enough space on the page, expands a page thread and writes the data on the new page.
+void appendDataOrExpandThread(const char *filename, size_t page_index, const char *line);
 
 /// Adds a new table header to the file and creates a link for it in the root page.
 void addTableHeader(const char *filename, Table *table);
