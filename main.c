@@ -62,8 +62,36 @@ void tableSearchTest()
     printf("%zd\n\n", exitcode);
 }
 
+void tableCreationTest()
+{
+    freeDatabaseFile(TARGET_FILE);
+    createDatabasePage(TARGET_FILE, "Test DB");
+
+    Field **fields = (Field**) malloc(sizeof(Field*) * 3);
+
+    fields[0] = createField("F1", INTEGER);
+    fields[1] = createField("Field2", INTEGER);
+    fields[2] = createField("Data Field 3", INTEGER);
+
+    TableSchema *tableSchema = createTableSchema(fields, 3, 0);
+
+    Table *table = createTable(tableSchema, "Table1");
+
+    for (size_t i = 0; i < 150; i++) {
+        char **rec = (char**) malloc(sizeof(char*) * 3);
+        rec[0] = createDataCell("First");
+        rec[1] = createDataCell("Second");
+        rec[2] = createDataCell("Third");
+        insertTableRecord(table, createTableRecord(3, rec));
+    }
+
+    addTableHeader(TARGET_FILE, table);
+
+    destroyTable(table);
+}
+
 int main()
 {
-    tableSearchTest();
+    tableCreationTest();
     return 0;
 }

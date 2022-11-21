@@ -28,6 +28,7 @@
 #define PAGE_SEARCH_FAILED 0
 #define PAGE_DB_ROOT_INDEX 0
 
+#define SEARCH_PAGE_NOT_FOUND (-1)
 #define SEARCH_TABLE_NOT_FOUND 0
 
 /*
@@ -163,9 +164,7 @@ size_t findTableOnPage(DataPage *dataPage, const char *table_name, size_t *check
 size_t findTable(const char *filename, const char *table_name);
 
 /// Adds a new table header to the file and creates a link for it in the root page.
+/// Exits the table already exists.
 void addTableHeader(const char *filename, Table *table);
-
-/// Finds first table page by table name.
-size_t findTablePage(const char *filename, const char *table_name);
 
 #endif //LLP_LAB1_C_DB_FILE_MANAGER_H
