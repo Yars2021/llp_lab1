@@ -280,7 +280,7 @@ void appendData(DataPage *dataPage, const char *line)
 
 void appendDataOrExpandThread(const char *filename, size_t page_index, const char *line)
 {
-    if (!line || strlen(line) > PAGE_DATA_SIZE) return;
+    if (!line || strlen(line) >= PAGE_DATA_SIZE) return;
 
     DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
     readDataPage(filename, dataPage, page_index);
@@ -296,12 +296,58 @@ void appendDataOrExpandThread(const char *filename, size_t page_index, const cha
     } else {
         size_t new_page = expandPageThread(filename, page_index);
         if (new_page == PAGE_SEARCH_FAILED) return;
+
         DataPage *newPage = (DataPage*) malloc(sizeof(DataPage));
         readDataPage(filename, newPage, new_page);
         appendData(newPage, line);
         writeDataPage(filename, newPage);
         free(newPage);
     }
+}
+
+size_t findTableOnPage(DataPage *dataPage, const char *table_name, size_t *checked) {
+    if (!dataPage || !table_name) return PAGE_SEARCH_FAILED;
+
+    size_t index = 0, parsed = 0, found = 0;
+    while (!found && index < PAGE_DATA_SIZE && dataPage->page_data[index] != '\0') {
+        TableLink *tableLink = parseTableLinkJSON(dataPage->page_data + index, 0, &parsed);
+        index += parsed;
+        if (tableLink != NULL && strcmp(table_name, tableLink->table_name) == 0) found = tableLink->link;
+        (*checked)++;
+        while (dataPage->page_data[index] == '\0' && index < PAGE_DATA_SIZE) index++;
+        destroyTableLink(tableLink);
+    }
+
+    if (!found) return PAGE_SEARCH_FAILED;
+
+    return found;
+}
+
+size_t findTable(const char *filename, const char *table_name)
+{
+    if (!filename || !table_name) return PAGE_SEARCH_FAILED;
+
+    DataPage *dbHeader = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, dbHeader, PAGE_DB_ROOT_INDEX);
+    int32_t num_of_tables = getNumberOfTables(dbHeader);
+    int32_t num_of_pages = getNumberOfPages(dbHeader);
+    free(dbHeader);
+
+    if (num_of_tables == PAGE_CORRUPT_EXITCODE || num_of_pages == PAGE_CORRUPT_EXITCODE) return PAGE_SEARCH_FAILED;
+
+    size_t found = 0, iterated = 0;
+    for (uint64_t current = PAGE_DB_ROOT_INDEX, last = current + 1; current != last && iterated < num_of_tables && !found;) {
+        last = current;
+        DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
+        readDataPage(filename, dataPage, current);
+        current = dataPage->header.next_related_page;
+        found = findTableOnPage(dataPage, table_name, &iterated);
+        free(dataPage);
+    }
+
+    if (!found) return PAGE_SEARCH_FAILED;
+
+    return found;
 }
 
 void addTableHeader(const char *filename, Table *table)

@@ -87,6 +87,7 @@ void createDatabasePage(const char *filename, const char *db_name);
 void expandDBFile(const char *filename);
 
 /// Appends a page to a page thread linking it to the previous one. Returns the new page index.
+/// Page flags are copied.
 size_t expandPageThread(const char *filename, size_t page_index);
 
 /// Returns the index of the closest free page starting from the starting_point.
@@ -154,6 +155,12 @@ void appendData(DataPage *dataPage, const char *line);
 /// Appends a line to the page in file.
 /// If there is not enough space on the page, expands a page thread and writes the data on the new page.
 void appendDataOrExpandThread(const char *filename, size_t page_index, const char *line);
+
+/// Returns the TableHeader page index for the provided table name. If the table does not exist, returns PAGE_SEARCH_FAILED.
+size_t findTableOnPage(DataPage *dataPage, const char *table_name, size_t *checked);
+
+/// Returns the TableHeader page index for the provided table name. If the table does not exist, returns PAGE_SEARCH_FAILED.
+size_t findTable(const char *filename, const char *table_name);
 
 /// Adds a new table header to the file and creates a link for it in the root page.
 void addTableHeader(const char *filename, Table *table);
