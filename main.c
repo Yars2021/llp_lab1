@@ -108,7 +108,7 @@ void tableCreationTest(int del)
     destroyTable(table);
 
     dataPage = (DataPage*) malloc(sizeof(DataPage));
-    readDataPage(TARGET_FILE, dataPage, findTable(TARGET_FILE, "Table1"));
+    readDataPage(TARGET_FILE, dataPage, findTable(TARGET_FILE, "Table2"));
     printf("%zd\n", getTableLength(dataPage));
     free(dataPage);
 
