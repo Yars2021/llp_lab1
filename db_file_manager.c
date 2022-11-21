@@ -309,12 +309,12 @@ void appendDataOrExpandThread(const char *filename, size_t page_index, const cha
         int flags;
         if (new_page == PAGE_SEARCH_FAILED) return;
 
-        DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
-        readDataPage(filename, dataPage, current);
-        dataPage->header.next_related_page = new_page;
-        flags = dataPage->header.flags;
-        writeDataPage(filename, dataPage);
-        free(dataPage);
+        DataPage *tailPage = (DataPage*) malloc(sizeof(DataPage));
+        readDataPage(filename, tailPage, current);
+        tailPage->header.next_related_page = new_page;
+        flags = tailPage->header.flags;
+        writeDataPage(filename, tailPage);
+        free(tailPage);
 
         DataPage *newPage = (DataPage*) malloc(sizeof(DataPage));
         readDataPage(filename, newPage, new_page);
