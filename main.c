@@ -10,7 +10,7 @@ void tableSearchTest()
     createDatabasePage(TARGET_FILE, "Test DB");
     DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
     readDataPage(TARGET_FILE, dataPage, PAGE_DB_ROOT_INDEX);
-    updateNumberOfPages(dataPage, 2);
+    updateNumberOfPages(dataPage, 1);
     updateNumberOfTables(dataPage, 7);
     appendData(dataPage, "\0");
     appendData(dataPage, "\0");
@@ -62,7 +62,8 @@ void tableSearchTest()
     printf("%zd\n\n", exitcode);
 }
 
-void tableCreationTest()
+/// Creates a table named Table1 with 250 records in it and then adds 100 more after creating another table. If del is true, drops Table1 in the end.
+void tableCreationTest(int del)
 {
     freeDatabaseFile(TARGET_FILE);
     createDatabasePage(TARGET_FILE, "Test DB");
@@ -77,7 +78,7 @@ void tableCreationTest()
 
     Table *table = createTable(tableSchema, "Table1");
 
-    for (size_t i = 0; i < 150; i++) {
+    for (size_t i = 0; i < 250; i++) {
         char **rec = (char**) malloc(sizeof(char*) * 3);
         rec[0] = createDataCell("First");
         rec[1] = createDataCell("Second");
@@ -87,11 +88,54 @@ void tableCreationTest()
 
     addTableHeader(TARGET_FILE, table);
 
+    DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(TARGET_FILE, dataPage, findTable(TARGET_FILE, "Table1"));
+    printf("%zd\n", getTableLength(dataPage));
+    free(dataPage);
+
+    table = createTable(tableSchema, "Table2");
+
+    for (size_t i = 0; i < 160; i++) {
+        char **rec = (char**) malloc(sizeof(char*) * 3);
+        rec[0] = createDataCell("1");
+        rec[1] = createDataCell("2");
+        rec[2] = createDataCell("3");
+        insertTableRecord(table, createTableRecord(3, rec));
+    }
+
+    addTableHeader(TARGET_FILE, table);
+
     destroyTable(table);
+
+    dataPage = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(TARGET_FILE, dataPage, findTable(TARGET_FILE, "Table1"));
+    printf("%zd\n", getTableLength(dataPage));
+    free(dataPage);
+
+    table = createTable(tableSchema, "Table1");
+
+    for (size_t i = 0; i < 100; i++) {
+        char **rec = (char**) malloc(sizeof(char*) * 3);
+        rec[0] = createDataCell("ADDED1");
+        rec[1] = createDataCell("ADDED2");
+        rec[2] = createDataCell("ADDED3");
+        insertTableRecord(table, createTableRecord(3, rec));
+    }
+
+    insertTableRecords(TARGET_FILE, table);
+
+    destroyTable(table);
+
+    dataPage = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(TARGET_FILE, dataPage, findTable(TARGET_FILE, "Table1"));
+    printf("%zd\n", getTableLength(dataPage));
+    free(dataPage);
+
+    if (del) deleteTable(TARGET_FILE, "Table1");
 }
 
 int main()
 {
-    tableCreationTest();
+    tableCreationTest(0);
     return 0;
 }

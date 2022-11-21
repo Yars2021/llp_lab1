@@ -12,9 +12,9 @@
 
 #define PAGE_SIZE 4096
 #define PAGE_HEADER_SIZE 256
-#define PAGE_METADATA_SIZE 236
-#define PAGE_E_HEADER_MD_SIZE 228
-#define PAGE_DATA_SIZE 3839
+#define PAGE_METADATA_SIZE 237
+#define PAGE_E_HEADER_MD_SIZE 229
+#define PAGE_DATA_SIZE 3840
 
 #define PAGE_CORRUPT_EXITCODE       (-1)
 #define PAGE_TYPE_TABLE_DATA        0b00000000
@@ -64,19 +64,19 @@ typedef struct {
     u_int64_t next_related_page;
     u_int16_t data_size;
     char metadata[PAGE_METADATA_SIZE];
-} DataPageHeader;
+} __attribute__((packed)) DataPageHeader;
 
 /// DataPage. Its size is 4095 bytes + 1 termination byte, 256 first of which store the header data.
 typedef struct {
     DataPageHeader header;
     char page_data[PAGE_SIZE - PAGE_HEADER_SIZE];
-} DataPage;
+} __attribute__((packed)) DataPage;
 
 /// Clears the page (does not affect its index).
 void freePage(DataPage *dataPage);
 
 /// Clears the page and all the related pages in the file.
-void freePageThread(char *filename, size_t page_index);
+void freePageThread(const char *filename, size_t page_index);
 
 /// Clears the database file.
 void freeDatabaseFile(const char *filename);
@@ -163,8 +163,19 @@ size_t findTableOnPage(DataPage *dataPage, const char *table_name, size_t *check
 /// Returns the TableHeader page index for the provided table name. If the table does not exist, returns PAGE_SEARCH_FAILED.
 size_t findTable(const char *filename, const char *table_name);
 
-/// Adds a new table header to the file and creates a link for it in the root page.
-/// Exits the table already exists.
+/// Adds a new table header to the file and creates a link for it in the root page. Exits if the table already exists.
+/// (CREATE TABLE ... VALUES(...)).
 void addTableHeader(const char *filename, Table *table);
+
+/// Appends all the records into the table. Does nothing if the table does not exist.
+/// (INSERT INTO ... VALUES(...)).
+void insertTableRecords(const char *filename, Table *table);
+
+/// Helper function for deleteTable(). Finds the index, where the TableLink with the provided name is stored and erases it.
+size_t findAndErase(DataPage *dataPage, const char *table_name, size_t *checked);
+
+/// Clears all the pages with the table data and erases the TableLink.
+/// (DROP TABLE ...).
+void deleteTable(const char *filename, const char *table_name);
 
 #endif //LLP_LAB1_C_DB_FILE_MANAGER_H

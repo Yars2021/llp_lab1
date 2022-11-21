@@ -16,11 +16,11 @@ void freePage(DataPage *dataPage)
     dataPage->header.next_related_page = dataPage->header.page_index;
     dataPage->header.data_size = 0;
     updatePageStatus(dataPage, PAGE_STATUS_INACTIVE);
-    memset(dataPage->header.metadata,'\0',PAGE_METADATA_SIZE + 1);
-    memset(dataPage->page_data,'\0',PAGE_DATA_SIZE + 1);
+    memset(dataPage->header.metadata,'\0',PAGE_METADATA_SIZE);
+    memset(dataPage->page_data,'\0',PAGE_DATA_SIZE);
 }
 
-void freePageThread(char *filename, size_t page_index)
+void freePageThread(const char *filename, size_t page_index)
 {
     if (!filename) return;
     for (uint64_t current = page_index, last = current + 1; current != last;) {
@@ -45,10 +45,12 @@ void createDatabasePage(const char *filename, const char *db_name)
     if (strlen(db_name) >= PAGE_E_HEADER_MD_SIZE) return;
     DataPage *dbHeaderPage = (DataPage*) malloc(sizeof(DataPage));
     freeDatabaseFile(filename);
-    dbHeaderPage->header.page_index = 0;
-    dbHeaderPage->header.next_related_page = 0;
+    freePage(dbHeaderPage);
     updatePageType(dbHeaderPage, PAGE_TYPE_DATABASE_HEADER);
     updatePageStatus(dbHeaderPage, PAGE_STATUS_ACTIVE);
+    dbHeaderPage->header.page_index = 0;
+    dbHeaderPage->header.next_related_page = dbHeaderPage->header.page_index;
+    dbHeaderPage->header.data_size = 0;
     updateNumberOfPages(dbHeaderPage, 1);
     updateNumberOfTables(dbHeaderPage, 0);
     updateHeaderPageMetadata(dbHeaderPage, db_name);
@@ -59,6 +61,7 @@ void createDatabasePage(const char *filename, const char *db_name)
 void expandDBFile(const char *filename)
 {
     if (!filename) return;
+
     DataPage *dbHeaderPage = (DataPage*) malloc(sizeof(DataPage));
     readDataPage(filename, dbHeaderPage, PAGE_DB_ROOT_INDEX);
     int32_t index = getNumberOfPages(dbHeaderPage);
@@ -69,11 +72,8 @@ void expandDBFile(const char *filename)
     if (index != PAGE_CORRUPT_EXITCODE) {
         DataPage *newPage = (DataPage*) malloc(sizeof(DataPage));
         freePage(newPage);
-        newPage->header.flags = 0;
         newPage->header.page_index = index;
         newPage->header.next_related_page = newPage->header.page_index;
-        newPage->header.data_size = 0;
-        updatePageStatus(newPage, PAGE_STATUS_INACTIVE);
         writeDataPage(filename, newPage);
         free(newPage);
     }
@@ -84,7 +84,6 @@ size_t expandPageThread(const char *filename, size_t page_index)
     if (!filename) return PAGE_SEARCH_FAILED;
 
     uint64_t current = page_index;
-
     for (uint64_t last = current + 1; current != last;) {
         last = current;
         DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
@@ -121,6 +120,7 @@ size_t expandPageThread(const char *filename, size_t page_index)
 size_t findFreePageOrExpand(const char *filename, size_t starting_point)
 {
     if (!filename) return PAGE_SEARCH_FAILED;
+
     DataPage *dbHeaderPage = (DataPage*) malloc(sizeof(DataPage));
     readDataPage(filename, dbHeaderPage, PAGE_DB_ROOT_INDEX);
     size_t max_index = getNumberOfPages(dbHeaderPage), found = 0;
@@ -168,23 +168,23 @@ void writeDataPage(const char *filename, DataPage *dataPage)
 void updatePageMetadata(DataPage *dataPage, const char *metadata)
 {
     if (!dataPage || !metadata) return;
-    memset(dataPage->header.metadata,'\0',PAGE_METADATA_SIZE + 1);
-    memcpy(dataPage->header.metadata, metadata, min_size(strlen(metadata), PAGE_METADATA_SIZE));
+    memset(dataPage->header.metadata,'\0',PAGE_METADATA_SIZE);
+    memcpy(dataPage->header.metadata, metadata, min_size(strlen(metadata), PAGE_METADATA_SIZE - 1));
 }
 
 void updatePageData(DataPage *dataPage, const char *data)
 {
     if (!dataPage || !data) return;
-    memset(dataPage->page_data,'\0',PAGE_DATA_SIZE + 1);
-    memcpy(dataPage->page_data, data, min_size(strlen(data), PAGE_DATA_SIZE));
-    dataPage->header.data_size = min_size(strlen(data) + 1, PAGE_DATA_SIZE - 1);
+    memset(dataPage->page_data,'\0',PAGE_DATA_SIZE);
+    memcpy(dataPage->page_data, data, min_size(strlen(data), PAGE_DATA_SIZE - 1));
+    dataPage->header.data_size = min_size(strlen(data) + 1, PAGE_DATA_SIZE);
 }
 
 void updateHeaderPageMetadata(DataPage *dataPage, const char *metadata)
 {
     if (!dataPage || !metadata) return;
-    memset(dataPage->header.metadata + sizeof(u_int32_t) * 2, '\0', PAGE_E_HEADER_MD_SIZE + 1);
-    memcpy(dataPage->header.metadata + sizeof(u_int32_t) * 2, metadata, min_size(strlen(metadata), PAGE_E_HEADER_MD_SIZE));
+    memset(dataPage->header.metadata + sizeof(u_int32_t) * 2, '\0', PAGE_E_HEADER_MD_SIZE);
+    memcpy(dataPage->header.metadata + sizeof(u_int32_t) * 2, metadata, min_size(strlen(metadata), PAGE_E_HEADER_MD_SIZE - 1));
 }
 
 void updateNumberOfPages(DataPage *dataPage, u_int32_t num)
@@ -270,10 +270,10 @@ void updatePageStatus(DataPage *dataPage, u_int8_t new_status)
 void appendData(DataPage *dataPage, const char *line)
 {
     if (!dataPage || !line) return;
-    if (dataPage->header.data_size + 1 + strlen(line) > PAGE_DATA_SIZE) return;
+    if (dataPage->header.data_size + strlen(line) + 1 > PAGE_DATA_SIZE) return;
     if (dataPage->header.data_size == 0) updatePageData(dataPage, line);
     else {
-        memcpy(getPageData(dataPage) + dataPage->header.data_size + 1, line, strlen(line) + 1);
+        memcpy(getPageData(dataPage) + dataPage->header.data_size, line, strlen(line) + 1);
         dataPage->header.data_size += (strlen(line) + 1);
     }
 }
@@ -293,7 +293,7 @@ void appendDataOrExpandThread(const char *filename, size_t page_index, const cha
         last = current;
         DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
         readDataPage(filename, dataPage, current);
-        if (dataPage->header.data_size + 1 + strlen(line) < PAGE_DATA_SIZE) found = (ssize_t) current;
+        if (dataPage->header.data_size + strlen(line) + 1 <= PAGE_DATA_SIZE) found = (ssize_t) current;
         current = dataPage->header.next_related_page;
         free(dataPage);
     }
@@ -309,23 +309,20 @@ void appendDataOrExpandThread(const char *filename, size_t page_index, const cha
         int flags;
         if (new_page == PAGE_SEARCH_FAILED) return;
 
-        DataPage *threadTail = (DataPage*) malloc(sizeof(DataPage));
-        readDataPage(filename, threadTail, new_page);
-        threadTail->header.next_related_page = new_page;
-        flags = threadTail->header.flags;
-        writeDataPage(filename, threadTail);
-        free(threadTail);
-
         DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
-        readDataPage(filename, dataPage, new_page);
-        freePage(dataPage);
-        dataPage->header.flags = flags;
-        dataPage->header.page_index = new_page;
+        readDataPage(filename, dataPage, current);
         dataPage->header.next_related_page = new_page;
-        updatePageStatus(dataPage, PAGE_STATUS_ACTIVE);
-        appendData(dataPage, line);
+        flags = dataPage->header.flags;
         writeDataPage(filename, dataPage);
         free(dataPage);
+
+        DataPage *newPage = (DataPage*) malloc(sizeof(DataPage));
+        readDataPage(filename, newPage, new_page);
+        newPage->header.flags = flags;
+        newPage->header.page_index = new_page;
+        newPage->header.next_related_page = newPage->header.page_index;
+        writeDataPage(filename, newPage);
+        free(newPage);
     }
 }
 
@@ -333,13 +330,15 @@ size_t findTableOnPage(DataPage *dataPage, const char *table_name, size_t *check
     if (!dataPage || !table_name) return PAGE_SEARCH_FAILED;
 
     size_t index = 0, parsed = 0, found = 0;
-    while (!found && index < PAGE_DATA_SIZE && dataPage->page_data[index] != '\0') {
+    while (dataPage->page_data[index] == '\0' && index < PAGE_DATA_SIZE) index++;
+
+    while (!found && index < PAGE_DATA_SIZE) {
         TableLink *tableLink = parseTableLinkJSON(dataPage->page_data + index, 0, &parsed);
         index += parsed;
         if (tableLink != NULL && strcmp(table_name, tableLink->table_name) == 0) found = tableLink->link;
-        (*checked)++;
-        while (dataPage->page_data[index] == '\0' && index < PAGE_DATA_SIZE) index++;
         destroyTableLink(tableLink);
+        while (dataPage->page_data[index] == '\0' && index < PAGE_DATA_SIZE) index++;
+        (*checked)++;
     }
 
     if (!found) return PAGE_SEARCH_FAILED;
@@ -400,12 +399,13 @@ void addTableHeader(const char *filename, Table *table)
     freePage(tableHeader);
     char *table_schema = transformTableSchemaToJSON(table->tableSchema);
     updatePageStatus(tableHeader, PAGE_STATUS_ACTIVE);
+    updatePageType(tableHeader, PAGE_TYPE_TABLE_HEADER);
     updateTableLength(tableHeader, table->length);
     updateHeaderPageMetadata(tableHeader, table->table_name);
     updatePageData(tableHeader, table_schema);
-    free(table_schema);
     tableHeader->header.data_size = PAGE_DATA_SIZE;
     writeDataPage(filename, tableHeader);
+    free(table_schema);
     free(tableHeader);
 
     size_t table_data = findFreePageOrExpand(filename, PAGE_DB_ROOT_INDEX);
@@ -414,9 +414,10 @@ void addTableHeader(const char *filename, Table *table)
     DataPage *tableData = (DataPage*) malloc(sizeof(DataPage));
     readDataPage(filename, tableData, table_header);
     freePage(tableData);
-    tableData->header.page_index = table_data;
     updatePageStatus(tableData, PAGE_STATUS_ACTIVE);
     updatePageType(tableData, PAGE_TYPE_TABLE_DATA);
+    tableData->header.page_index = table_data;
+    tableData->header.next_related_page = tableData->header.page_index;
     writeDataPage(filename, tableData);
     free(tableData);
 
@@ -431,4 +432,78 @@ void addTableHeader(const char *filename, Table *table)
     tableHeader->header.next_related_page = table_data;
     writeDataPage(filename, tableHeader);
     free(tableHeader);
+}
+
+void insertTableRecords(const char *filename, Table *table)
+{
+    if (!filename || !table || !table->tableSchema || table->length == 0) return;
+    size_t search_result = findTable(filename, table->table_name);
+    if (search_result == SEARCH_TABLE_NOT_FOUND) return;
+
+    DataPage *tableHeader = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, tableHeader, search_result);
+    updateTableLength(tableHeader, getTableLength(tableHeader) + table->length);
+    writeDataPage(filename, tableHeader);
+    free(tableHeader);
+
+    for (TableRecord *tableRecord = table->firstTableRecord; tableRecord != NULL; tableRecord = tableRecord->next_record) {
+        char *table_record = transformTableRecordToJSON(tableRecord);
+        appendDataOrExpandThread(filename, search_result, table_record);
+        free(table_record);
+    }
+}
+
+size_t findAndErase(DataPage *dataPage, const char *table_name, size_t *checked)
+{
+    if (!dataPage || !table_name) return PAGE_SEARCH_FAILED;
+
+    size_t index = 0, parsed = 0, found = 0, stop = 0;
+    while (dataPage->page_data[index] == '\0' && index < PAGE_DATA_SIZE) index++;
+
+    while (!stop && index < PAGE_DATA_SIZE) {
+        TableLink *tableLink = parseTableLinkJSON(dataPage->page_data + index, 0, &parsed);
+        if (tableLink != NULL && strcmp(table_name, tableLink->table_name) == 0) {
+            found = index;
+            stop = 1;
+        }
+        index += parsed;
+        destroyTableLink(tableLink);
+        while (dataPage->page_data[index] == '\0' && index < PAGE_DATA_SIZE) index++;
+        (*checked)++;
+    }
+
+    memset(dataPage->page_data + found, '\0', parsed);
+
+    if (!found) return PAGE_SEARCH_FAILED;
+
+    return found;
+}
+
+void deleteTable(const char *filename, const char *table_name)
+{
+    if (!filename || !table_name) return;
+    size_t search_result = findTable(filename, table_name);
+    if (search_result == SEARCH_TABLE_NOT_FOUND) return;
+    freePageThread(filename, search_result);
+
+    DataPage *dbHeader = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, dbHeader, PAGE_DB_ROOT_INDEX);
+    int32_t num_of_tables = getNumberOfTables(dbHeader);
+    int32_t num_of_pages = getNumberOfPages(dbHeader);
+    updateNumberOfTables(dbHeader, num_of_tables - 1);
+    writeDataPage(filename, dbHeader);
+    free(dbHeader);
+
+    if (num_of_tables == PAGE_CORRUPT_EXITCODE || num_of_pages == PAGE_CORRUPT_EXITCODE) return;
+
+    size_t found = 0, iterated = 0;
+    for (uint64_t current = PAGE_DB_ROOT_INDEX, last = current + 1; current != last && iterated < num_of_tables && !found;) {
+        last = current;
+        DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
+        readDataPage(filename, dataPage, current);
+        current = dataPage->header.next_related_page;
+        found = findAndErase(dataPage, table_name, &iterated);
+        writeDataPage(filename, dataPage);
+        free(dataPage);
+    }
 }
