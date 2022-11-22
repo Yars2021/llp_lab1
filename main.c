@@ -134,8 +134,34 @@ void tableCreationTest(int del)
     if (del) deleteTable(TARGET_FILE, "Table1");
 }
 
-int main()
+int main(int argc, char **argv)
 {
-    tableCreationTest(0);
+    if (argc <= 1) {
+        printf("No argument provided\n");
+    } else {
+        switch (argv[1][0]) {
+            case '0':
+                printf("Running table search test.\n");
+                printf("Creates 7 tables across 2 pages. Puts some random \\0s between some of them then searches for all of them and for the \"no\" table, which does not exist.\n");
+                tableSearchTest();
+                printf("Test finished.\n");
+                break;
+            case '1':
+                printf("Running table search test without deleting.\n");
+                printf("Creates a table named Table1 with 250 records in it and then adds 100 more after creating another table\n");
+                tableCreationTest(0);
+                printf("Test finished.\n");
+                break;
+            case '2':
+                printf("Running table search test with deleting.\n");
+                printf("Creates a table named Table1 with 250 records in it and then adds 100 more after creating another table. Drops Table1 in the end.\n");
+                tableCreationTest(1);
+                printf("Test finished.\n");
+                break;
+            default:
+                printf("Invalid argument\n");
+                break;
+        }
+    }
     return 0;
 }
