@@ -78,7 +78,7 @@ void tableCreationTest(int del)
 
     Table *table = createTable(tableSchema, "Table1");
 
-    for (size_t i = 0; i < 250; i++) {
+    for (size_t i = 0; i < 110; i++) {
         char **rec = (char**) malloc(sizeof(char*) * 3);
         rec[0] = createDataCell("First");
         rec[1] = createDataCell("Second");
@@ -88,80 +88,19 @@ void tableCreationTest(int del)
 
     addTableHeader(TARGET_FILE, table);
 
-    DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
-    readDataPage(TARGET_FILE, dataPage, findTable(TARGET_FILE, "Table1"));
-    printf("%zd\n", getTableLength(dataPage));
-    free(dataPage);
-
-    table = createTable(tableSchema, "Table2");
-
-    for (size_t i = 0; i < 160; i++) {
-        char **rec = (char**) malloc(sizeof(char*) * 3);
-        rec[0] = createDataCell("1");
-        rec[1] = createDataCell("2");
-        rec[2] = createDataCell("3");
-        insertTableRecord(table, createTableRecord(3, rec));
-    }
-
-    addTableHeader(TARGET_FILE, table);
-
     destroyTable(table);
 
-    dataPage = (DataPage*) malloc(sizeof(DataPage));
-    readDataPage(TARGET_FILE, dataPage, findTable(TARGET_FILE, "Table2"));
-    printf("%zd\n", getTableLength(dataPage));
-    free(dataPage);
-
-    table = createTable(tableSchema, "Table1");
-
-    for (size_t i = 0; i < 100; i++) {
-        char **rec = (char**) malloc(sizeof(char*) * 3);
-        rec[0] = createDataCell("ADDED1");
-        rec[1] = createDataCell("ADDED2");
-        rec[2] = createDataCell("ADDED3");
-        insertTableRecord(table, createTableRecord(3, rec));
-    }
-
-    insertTableRecords(TARGET_FILE, table);
-
-    destroyTable(table);
-
-    dataPage = (DataPage*) malloc(sizeof(DataPage));
-    readDataPage(TARGET_FILE, dataPage, findTable(TARGET_FILE, "Table1"));
-    printf("%zd\n", getTableLength(dataPage));
-    free(dataPage);
-
-    if (del) deleteTable(TARGET_FILE, "Table1");
+    printTable(TARGET_FILE, "Table1", 0, NULL);
 }
 
 int main(int argc, char **argv)
 {
-    if (argc <= 1) {
-        printf("No argument provided\n");
-    } else {
-        switch (argv[1][0]) {
-            case '0':
-                printf("Running table search test.\n");
-                printf("Creates 7 tables across 2 pages. Puts some random \\0s between some of them then searches for all of them and for the \"no\" table, which does not exist.\n");
-                tableSearchTest();
-                printf("Test finished.\n");
-                break;
-            case '1':
-                printf("Running table search test without deleting.\n");
-                printf("Creates a table named Table1 with 250 records in it and then adds 100 more after creating another table\n");
-                tableCreationTest(0);
-                printf("Test finished.\n");
-                break;
-            case '2':
-                printf("Running table search test with deleting.\n");
-                printf("Creates a table named Table1 with 250 records in it and then adds 100 more after creating another table. Drops Table1 in the end.\n");
-                tableCreationTest(1);
-                printf("Test finished.\n");
-                break;
-            default:
-                printf("Invalid argument\n");
-                break;
-        }
-    }
+//    if (argc <= 1) {
+//        printf("No argument provided\n");
+//    } else {
+//        switch (argv[1][0]) {
+//        }
+//    }
+    tableCreationTest(0);
     return 0;
 }

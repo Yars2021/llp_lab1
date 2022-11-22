@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdint.h>
 #include "db_internals.h"
+#include "db_interface.h"
 
 #define PAGE_SIZE 4096
 #define PAGE_HEADER_SIZE 256
@@ -177,5 +178,9 @@ size_t findAndErase(DataPage *dataPage, const char *table_name, size_t *checked)
 /// Clears all the pages with the table data and erases the TableLink.
 /// (DROP TABLE ...).
 void deleteTable(const char *filename, const char *table_name);
+
+/// Outputs all the records of the table filtering them through the provided filter.
+/// (SELECT * FROM ... WHERE ...)
+void printTable(const char *filename, const char *table_name, int num_of_filters, SearchFilter **filters);
 
 #endif //LLP_LAB1_C_DB_FILE_MANAGER_H

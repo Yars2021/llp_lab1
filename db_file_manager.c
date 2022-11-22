@@ -507,3 +507,73 @@ void deleteTable(const char *filename, const char *table_name)
         free(dataPage);
     }
 }
+
+void printTable(const char *filename, const char *table_name, int num_of_filters, SearchFilter **filters)
+{
+    if (!filename || !table_name) return;
+    size_t search_result = findTable(filename, table_name);
+    if (search_result == SEARCH_TABLE_NOT_FOUND) return;
+
+    DataPage *tableHeader = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, tableHeader, search_result);
+    size_t length = getTableLength(tableHeader), data = tableHeader->header.next_related_page, pos;
+    printf("Table name: %s\nTable length: %zd\n", getHeaderPageMetadata(tableHeader), length);
+    printf("--------------------------------------------------------------------------\n");
+    TableSchema *tableSchema = parseTableSchemaJSON(tableHeader->page_data, 0, &pos);
+
+    printf("Fields:\n");
+    for (size_t i = 0; i < tableSchema->number_of_fields; i++) {
+        char *field_type;
+        switch (tableSchema->fields[i]->fieldType) {
+            case INTEGER:
+                field_type = "INTEGER";
+                break;
+            case FLOAT:
+                field_type = "FLOAT";
+                break;
+            case BOOLEAN:
+                field_type = "BOOLEAN";
+                break;
+            default:
+                field_type = "STRING";
+                break;
+        }
+
+        printf("%s : %s\n", tableSchema->fields[i]->field_name, field_type);
+    }
+
+    free(tableHeader);
+    printf("--------------------------------------------------------------------------\n");
+
+    size_t index = 0, page_index;
+    for (uint64_t current = data, last = current + 1; current != last && index < length;) {
+        last = current;
+        DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
+        readDataPage(filename, dataPage, current);
+        current = dataPage->header.next_related_page;
+        page_index = 0;
+        while (dataPage->page_data[page_index] == '\0') page_index++;
+        for (; page_index < dataPage->header.data_size && index < length; page_index += (strlen(dataPage->page_data + page_index) + 1), index++) {
+            TableRecord *tableRecord = parseTableRecordJSON(dataPage->page_data + page_index, 0, &pos, tableSchema);
+
+            switch (applyAll(tableRecord, num_of_filters, filters)) {
+                case FILTER_ACCEPT:
+                    printf("%zd: | ", index);
+                    for (size_t i = 0; i < tableRecord->length; i++)
+                        printf("%s | ", tableRecord->dataCells[i]);
+                    printf("\n");
+                    break;
+                case FILTER_REJECT:
+                    break;
+                case FILTER_INCOMPATIBLE:
+                    printf("%zd: Filter type error\n", index);
+                    break;
+            }
+
+            destroyTableRecord(tableRecord);
+        }
+        free(dataPage);
+    }
+
+    destroyTableSchema(tableSchema);
+}
