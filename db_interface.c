@@ -19,6 +19,23 @@ void bindFilter(SearchFilter *searchFilter, size_t column)
     searchFilter->field_index = column;
 }
 
+int cmpInteger(char *a, char *b)
+{
+
+}
+
+int cmpFloat(char *a, char *b)
+{
+
+}
+
+int cmpBoolean(char *a, char *b)
+{
+    if (strcmp(a, b) == 0) return 0;
+    if (strcmp(a, "True") == 0 && strcmp(b, "False") == 0) return 1;
+    return -1;
+}
+
 int applyFilter(SearchFilter *searchFilter, const char *dataCell)
 {
     if (!searchFilter || !searchFilter->field || !dataCell) return FILTER_NULL_POINTER;

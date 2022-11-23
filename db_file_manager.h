@@ -164,6 +164,9 @@ size_t findTableOnPage(DataPage *dataPage, const char *table_name, size_t *check
 /// Returns the TableHeader page index for the provided table name. If the table does not exist, returns PAGE_SEARCH_FAILED.
 size_t findTable(const char *filename, const char *table_name);
 
+/// Returns the schema of the table.
+TableSchema *getSchema(const char *filename, const char *table_name);
+
 /// Adds a new table header to the file and creates a link for it in the root page. Exits if the table already exists.
 /// (CREATE TABLE ... VALUES(...)).
 void addTableHeader(const char *filename, Table *table);
@@ -182,5 +185,9 @@ void deleteTable(const char *filename, const char *table_name);
 /// Outputs all the records of the table filtering them through the provided filter.
 /// (SELECT * FROM ... WHERE ...)
 void printTable(const char *filename, const char *table_name, int num_of_filters, SearchFilter **filters);
+
+/// Outputs fields from all the records of the table filtering them through the provided filter.
+/// (SELECT ... FROM ... WHERE ...)
+void printFields(const char *filename, const char *table_name, int num_of_fields, size_t *field_indexes, int num_of_filters, SearchFilter **filters);
 
 #endif //LLP_LAB1_C_DB_FILE_MANAGER_H

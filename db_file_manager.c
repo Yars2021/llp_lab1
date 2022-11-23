@@ -374,6 +374,20 @@ size_t findTable(const char *filename, const char *table_name)
     return found;
 }
 
+TableSchema *getSchema(const char *filename, const char *table_name)
+{
+    if (!filename || !table_name) return NULL;
+    size_t index = findTable(filename, table_name), pos = 0;
+    if (index == PAGE_SEARCH_FAILED) return NULL;
+
+    DataPage *tableHeader = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, tableHeader, index);
+    TableSchema *tableSchema = parseTableSchemaJSON(tableHeader->page_data, 0, &pos);
+    free(tableHeader);
+
+    return tableSchema;
+}
+
 void addTableHeader(const char *filename, Table *table)
 {
     if (!filename || !table || !table->tableSchema) return;
@@ -522,7 +536,7 @@ void printTable(const char *filename, const char *table_name, int num_of_filters
     printf("--------------------------------------------------------------------------\n");
     TableSchema *tableSchema = parseTableSchemaJSON(tableHeader->page_data, 0, &pos);
 
-    printf("Fields:\n");
+    printf("#  |  ");
     for (size_t i = 0; i < tableSchema->number_of_fields; i++) {
         char *field_type;
         switch (tableSchema->fields[i]->fieldType) {
@@ -540,11 +554,11 @@ void printTable(const char *filename, const char *table_name, int num_of_filters
                 break;
         }
 
-        printf("%s : %s\n", tableSchema->fields[i]->field_name, field_type);
+        printf("%s : %s  |  ", tableSchema->fields[i]->field_name, field_type);
     }
 
     free(tableHeader);
-    printf("--------------------------------------------------------------------------\n");
+    printf("\n--------------------------------------------------------------------------\n");
 
     size_t index = 0, page_index;
     for (uint64_t current = data, last = current + 1; current != last && index < length;) {
@@ -572,9 +586,15 @@ void printTable(const char *filename, const char *table_name, int num_of_filters
             }
 
             destroyTableRecord(tableRecord);
+            while (dataPage->page_data[page_index] == '\0') page_index++;
         }
         free(dataPage);
     }
 
     destroyTableSchema(tableSchema);
+}
+
+void printFields(const char *filename, const char *table_name, int num_of_fields, size_t *field_indexes, int num_of_filters, SearchFilter **filters)
+{
+    // ToDo (work in progress, will use this in Lab2)
 }
