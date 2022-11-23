@@ -78,7 +78,7 @@ void tableCreationTest(int del)
 
     Table *table = createTable(tableSchema, "Table1");
 
-    for (size_t i = 0; i < 110; i++) {
+    for (size_t i = 0; i < 150; i++) {
         char **rec = (char**) malloc(sizeof(char*) * 3);
         rec[0] = createDataCell("First");
         rec[1] = createDataCell("Second");

@@ -321,6 +321,7 @@ void appendDataOrExpandThread(const char *filename, size_t page_index, const cha
         newPage->header.flags = flags;
         newPage->header.page_index = new_page;
         newPage->header.next_related_page = newPage->header.page_index;
+        appendData(newPage, line);
         writeDataPage(filename, newPage);
         free(newPage);
     }

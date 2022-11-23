@@ -29,6 +29,9 @@ int applyFilter(SearchFilter *searchFilter, const char *dataCell)
         case FLOAT:
             // ToDo Add sign checks
             break;
+        case BOOLEAN:
+            // ToDo False < True
+            break;
         default: {
             if (!searchFilter->lower_threshold) {
                 if (!searchFilter->upper_threshold) return FILTER_ACCEPT;
