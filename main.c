@@ -81,6 +81,7 @@ void performanceTestMode(int argc, char **argv)
                     SearchFilter *id_constraint = createSearchFilter(INTEGER, NULL, &max_id);
                     bindFilter(id_constraint, 0);
                     printTable(TARGET_FILE, table_names[table_index], 1, &id_constraint);
+                    destroySearchFilter(id_constraint);
                     break;
                 }
                 case 'd': {

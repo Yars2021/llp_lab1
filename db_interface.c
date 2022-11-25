@@ -158,7 +158,5 @@ int applyAll(TableRecord *tableRecord, size_t num_of_filters, SearchFilter **fil
 void destroySearchFilter(SearchFilter *searchFilter)
 {
     if (!searchFilter) return;
-    free(searchFilter->lower_threshold);
-    free(searchFilter->upper_threshold);
     free(searchFilter);
 }
