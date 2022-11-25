@@ -111,7 +111,9 @@ void performanceTestMode(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-    uint_to_str(0);
-    performanceTestMode(argc, argv);
+    int64_t t = 10;
+    SearchFilter *searchFilter = createSearchFilter(createField("f", INTEGER), &t, NULL);
+    printf("%d\n", applyFilter(searchFilter, createDataCell("1023085732")));
+    //performanceTestMode(argc, argv);
     return 0;
 }

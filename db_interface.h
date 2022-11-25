@@ -5,8 +5,10 @@
 #ifndef LLP_LAB1_C_DB_INTERFACE_H
 #define LLP_LAB1_C_DB_INTERFACE_H
 
+#include <math.h>
 #include "db_internals.h"
 
+#define FLOAT_CMP_EPS 0.0000000001
 #define FILTER_REJECT 0
 #define FILTER_ACCEPT 1
 #define FILTER_INCOMPATIBLE (-1)
@@ -18,6 +20,12 @@ typedef struct {
     void *lower_threshold;
     void *upper_threshold;
 } SearchFilter;
+
+/// Parses a data cell into an Integer value.
+int64_t parseInteger(const char *line);
+
+/// Parses a data cell into a Float value.
+double parseFloat(const char *line);
 
 /// Creates a new instance of a SearchFilter.
 SearchFilter *createSearchFilter(Field *field, void *lower_threshold, void *upper_threshold);
