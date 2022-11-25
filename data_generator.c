@@ -4,6 +4,29 @@
 
 #include "data_generator.h"
 
+char *uint_to_str(size_t uint)
+{
+    char *reversed = (char*) malloc(32);
+    for (size_t i = 0; i < 32; i++) reversed[i] = '\0';
+    size_t len = 0, zero = 0;
+    for (size_t i = 0; uint > 0; i++, len++, uint /= 10) {
+        reversed[i] = (char)(uint % 10);
+        reversed[i] += '0';
+    }
+    char *actual;
+    if (len == 0) {
+        len++;
+        actual = (char*) malloc(len + 1);
+        actual[0] = '0';
+    } else {
+        actual = (char*) malloc(len + 1);
+        for (size_t i = 0; i < len; i++) actual[i] = reversed[len - i - 1];
+    }
+    actual[len] = '\0';
+    free(reversed);
+    return actual;
+}
+
 char *generateRandomString(size_t min_len, size_t max_len)
 {
     size_t len = (random() % (max_len - min_len + 1)) + min_len;
@@ -52,16 +75,19 @@ Field *generateField()
 
 TableSchema *generateSchema(size_t min_len, size_t max_len)
 {
-    size_t len = (random() % (max_len - min_len + 1)) + min_len;
+    size_t len = (random() % (max_len - min_len + 1)) + min_len + 1;
     Field **fields = (Field**) malloc(sizeof(Field*) * len);
-    for (size_t i = 0; i < len; i++) fields[i] = generateField();
-    return createTableSchema(fields, len, random() % len);
+    fields[0] = createField("ITEM_ID", INTEGER);
+    for (size_t i = 1; i < len; i++) fields[i] = generateField();
+    return createTableSchema(fields, len, 0);
 }
 
-TableRecord *generateRecord(TableSchema *tableSchema)
+TableRecord *generateRecord(TableSchema *tableSchema, size_t *id_counter)
 {
     char **dataCells = (char**) malloc(sizeof(char*) * tableSchema->number_of_fields);
-    for (size_t i = 0; i < tableSchema->number_of_fields; i++) {
+    dataCells[0] = uint_to_str(*id_counter);
+    (*id_counter)++;
+    for (size_t i = 1; i < tableSchema->number_of_fields; i++) {
         switch (tableSchema->fields[i]->fieldType) {
             case INTEGER:
                 dataCells[i] = generateRandomIntString(2, 15);
@@ -85,8 +111,8 @@ void generateTable(char *filename, char *table_name, size_t min_cols, size_t max
 {
     TableSchema *tableSchema = generateSchema(min_cols, max_cols);
     Table *table = createTable(tableSchema, table_name);
-    size_t len = (random() % (max_length - min_length + 1)) + min_length;
-    for (size_t i = 0; i < len; i++) insertTableRecord(table, generateRecord(tableSchema));
+    size_t len = (random() % (max_length - min_length + 1)) + min_length, id_counter = 0;
+    for (size_t i = 0; i < len; i++) insertTableRecord(table, generateRecord(tableSchema, &id_counter));
     addTableHeader(filename, table);
     destroyTable(table);
 }

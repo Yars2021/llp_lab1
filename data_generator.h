@@ -9,6 +9,9 @@
 #include "db_internals.h"
 #include "db_file_manager.h"
 
+/// Converts an unsigned int into a string.
+char *uint_to_str(size_t uint);
+
 /// Creates a random string.
 char *generateRandomString(size_t min_len, size_t max_len);
 
@@ -25,7 +28,7 @@ Field *generateField();
 TableSchema *generateSchema(size_t min_len, size_t max_len);
 
 /// Creates a random table row.
-TableRecord *generateRecord(TableSchema *tableSchema);
+TableRecord *generateRecord(TableSchema *tableSchema, size_t *id_counter);
 
 /// Creates a random table.
 void generateTable(char *filename, char *table_name, size_t min_cols, size_t max_cols, size_t min_length, size_t max_length);

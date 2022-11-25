@@ -199,10 +199,16 @@ void updateNumberOfTables(DataPage *dataPage, u_int32_t num)
     *(u_int32_t*)(dataPage->header.metadata + sizeof(u_int32_t)) = num;
 }
 
-void updateTableLength(DataPage *dataPage, u_int64_t num)
+void updateTableLength(DataPage *dataPage, u_int32_t num)
 {
     if (!dataPage) return;
-    *(u_int64_t*)(dataPage->header.metadata) = num;
+    *(u_int32_t*)(dataPage->header.metadata) = num;
+}
+
+void updateTableMaxID(DataPage *dataPage, u_int32_t num)
+{
+    if (!dataPage) return;
+    *(u_int32_t*)(dataPage->header.metadata + sizeof(u_int32_t)) = num;
 }
 
 char *getPageMetadata(DataPage *dataPage)
@@ -235,11 +241,18 @@ int32_t getNumberOfTables(DataPage *dataPage)
     return *(int32_t*)(dataPage->header.metadata + sizeof(u_int32_t));
 }
 
-int64_t getTableLength(DataPage *dataPage)
+int32_t getTableLength(DataPage *dataPage)
 {
     if (!dataPage) return PAGE_CORRUPT_EXITCODE;
-    return *(int64_t*)(dataPage->header.metadata);
+    return *(int32_t*)(dataPage->header.metadata);
 }
+
+int32_t getTableMaxID(DataPage *dataPage)
+{
+    if (!dataPage) return PAGE_CORRUPT_EXITCODE;
+    return *(int32_t*)(dataPage->header.metadata + sizeof(u_int32_t));
+}
+
 
 int getPageType(DataPage *dataPage)
 {

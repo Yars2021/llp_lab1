@@ -6,7 +6,7 @@
 #define TARGET_FILE "/home/yars/CLionProjects/llp_lab1_c/.database"
 #define NUM_OF_TABLES 15
 #define MIN_TABLE_LEN 1000
-#define MAX_TABLE_LEN 50000
+#define MAX_TABLE_LEN 5000
 
 void performanceTestMode(int argc, char **argv)
 {
@@ -62,7 +62,8 @@ void performanceTestMode(int argc, char **argv)
 
                         TableSchema *tableSchema = getSchema(TARGET_FILE, table_names[i]);
                         Table *table = createTable(tableSchema, table_names[i]);
-                        for (size_t j = 0; j < 50; j++) insertTableRecord(table, generateRecord(tableSchema));
+                        size_t id_counter = 0;
+                        for (size_t j = 0; j < 50; j++) insertTableRecord(table, generateRecord(tableSchema, &id_counter));
                         insertTableRecords(TARGET_FILE, table);
                         destroyTable(table);
 
@@ -108,6 +109,7 @@ void performanceTestMode(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
+    uint_to_str(0);
     performanceTestMode(argc, argv);
     return 0;
 }

@@ -46,8 +46,10 @@
  * ---------------------------------------------------------------------------
  * 00       | TableDataPage      | Table data page, contains records.
  * ---------------------------------------------------------------------------
- * 01       | TableHeaderPage    | Table header page, contains table name (M),
- *          |                    | length (8 bytes) (M) and table schema.
+ * 01       | TableHeaderPage    | Table header page, contains
+ *          |                    | table length (4 bytes) (M),
+ *          |                    | max id in the table (4 bytes) (M),
+ *          |                    | table name (M) and table schema.
  * ---------------------------------------------------------------------------
  * 10       | DatabaseHeaderPage | Database header page, contains
  *          |                    | number of pages (4 bytes) (M),
@@ -118,8 +120,11 @@ void updateNumberOfPages(DataPage *dataPage, u_int32_t num);
 /// Updates the number of pages for the DB Header page (stored in the second 4 bytes of the metadata).
 void updateNumberOfTables(DataPage *dataPage, u_int32_t num);
 
-/// Updates the number of records for the Table Header page (stored in the first 8 bytes of the metadata).
-void updateTableLength(DataPage *dataPage, u_int64_t num);
+/// Updates the number of records for the Table Header page (stored in the first 4 bytes of the metadata).
+void updateTableLength(DataPage *dataPage, u_int32_t num);
+
+/// Updates the number of records for the Table Header page (stored in the second 4 bytes of the metadata).
+void updateTableMaxID(DataPage *dataPage, u_int32_t num);
 
 /// Returns a char pointer to the DataPages metadata.
 char *getPageMetadata(DataPage *dataPage);
@@ -137,7 +142,10 @@ int32_t getNumberOfPages(DataPage *dataPage);
 int32_t getNumberOfTables(DataPage *dataPage);
 
 /// Returns the length of the table.
-int64_t getTableLength(DataPage *dataPage);
+int32_t getTableLength(DataPage *dataPage);
+
+/// returns max ID of the table.
+int32_t getTableMaxID(DataPage *dataPage);
 
 /// Returns the type of the DataPage or PAGE_CORRUPT_EXITCODE.
 int getPageType(DataPage *dataPage);
