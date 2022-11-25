@@ -3,7 +3,7 @@
 #include "db_file_manager.h"
 #include "data_generator.h"
 
-#define TARGET_FILE "/home/yars/CLionProjects/llp_lab1_c/.database"
+#define TARGET_FILE "../.database"
 #define NUM_OF_TABLES 15
 #define MIN_TABLE_LEN 1000
 #define MAX_TABLE_LEN 5000
@@ -107,6 +107,7 @@ void performanceTestMode(int argc, char **argv)
                 }
                 default:
                     print_time = 0;
+                    printf("Invalid argument, use -h to see the manual.\n");
                     break;
             }
             if (print_time) printf("The task took %lf seconds.\n", (double)(clock() - start) / CLOCKS_PER_SEC);
