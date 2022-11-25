@@ -77,9 +77,12 @@ void performanceTestMode(int argc, char **argv)
                 case 's': {
                     size_t table_index = random() % NUM_OF_TABLES;
                     printf("Performing the selection test on \"%s\"...\n\n", table_names[table_index]);
+                    TableSchema *tableSchema = getSchema(TARGET_FILE, table_names[table_index]);
+                    size_t key_col = tableSchema->key_column_index;
+                    destroyTableSchema(tableSchema);
                     uint64_t max_id = 50;
                     SearchFilter *id_constraint = createSearchFilter(INTEGER, NULL, &max_id);
-                    bindFilter(id_constraint, 0);
+                    bindFilter(id_constraint, key_col);
                     printTable(TARGET_FILE, table_names[table_index], 1, &id_constraint);
                     destroySearchFilter(id_constraint);
                     break;
