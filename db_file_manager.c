@@ -507,6 +507,30 @@ size_t findAndErase(DataPage *dataPage, const char *table_name, size_t *checked)
     return found;
 }
 
+void findAndUpdateMaxID(const char *filename, const char *table_name, uint32_t new_max_id)
+{
+    if (!filename || !table_name) return;
+    size_t search_result = findTable(filename, table_name);
+    if (search_result == SEARCH_TABLE_NOT_FOUND) return;
+    DataPage *tableHeader = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, tableHeader, search_result);
+    updateTableMaxID(tableHeader, new_max_id);
+    writeDataPage(filename, tableHeader);
+    free(tableHeader);
+}
+
+uint32_t findAndGetMaxID(const char *filename, const char *table_name)
+{
+    if (!filename || !table_name) return 0;
+    size_t search_result = findTable(filename, table_name);
+    if (search_result == SEARCH_TABLE_NOT_FOUND) return 0;
+    DataPage *tableHeader = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, tableHeader, search_result);
+    uint32_t maxID = getTableMaxID(tableHeader);
+    free(tableHeader);
+    return maxID;
+}
+
 void deleteTable(const char *filename, const char *table_name)
 {
     if (!filename || !table_name) return;
@@ -536,7 +560,7 @@ void deleteTable(const char *filename, const char *table_name)
     }
 }
 
-void printTable(const char *filename, const char *table_name, int num_of_filters, SearchFilter **filters)
+void printTable(const char *filename, const char *table_name, size_t num_of_filters, SearchFilter **filters)
 {
     if (!filename || !table_name) return;
     size_t search_result = findTable(filename, table_name);
@@ -607,7 +631,12 @@ void printTable(const char *filename, const char *table_name, int num_of_filters
     destroyTableSchema(tableSchema);
 }
 
-void printFields(const char *filename, const char *table_name, int num_of_fields, size_t *field_indexes, int num_of_filters, SearchFilter **filters)
+void updateRows(const char *filename, const char *table_name, TableRecord *new_value, size_t num_of_filters, SearchFilter **filters)
 {
-    // ToDo (work in progress, will use this in Lab2)
+    if (!filename || !table_name || !new_value || !filters) return;
+}
+
+void deleteRows(const char *filename, const char *table_name, size_t num_of_filters, SearchFilter **filters)
+{
+    if (!filename || !table_name || !filters) return;
 }

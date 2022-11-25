@@ -59,13 +59,15 @@ void performanceTestMode(int argc, char **argv)
                     printf("Performing the insertion test...\n");
                     for (size_t i = 0; i < NUM_OF_TABLES; i++) {
                         printf("Inserting into \"%s\"...\n", table_names[i]);
+                        uint32_t maxID = findAndGetMaxID(TARGET_FILE, table_names[i]);
 
                         TableSchema *tableSchema = getSchema(TARGET_FILE, table_names[i]);
                         Table *table = createTable(tableSchema, table_names[i]);
-                        size_t id_counter = 0;
+                        size_t id_counter = maxID + 1;
                         for (size_t j = 0; j < 50; j++) insertTableRecord(table, generateRecord(tableSchema, &id_counter));
                         insertTableRecords(TARGET_FILE, table);
                         destroyTable(table);
+                        findAndUpdateMaxID(TARGET_FILE, table_names[i], id_counter - 1);
 
                         printf("The insertion took %lf seconds\n\n", (double)(clock() - insertion_time) / CLOCKS_PER_SEC);
                         insertion_time = clock();

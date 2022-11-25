@@ -186,16 +186,26 @@ void insertTableRecords(const char *filename, Table *table);
 /// Helper function for deleteTable(). Finds the index, where the TableLink with the provided name is stored and erases it.
 size_t findAndErase(DataPage *dataPage, const char *table_name, size_t *checked);
 
+/// Searches for the table and updates its Max ID.
+void findAndUpdateMaxID(const char *filename, const char *table_name, uint32_t new_max_id);
+
+/// Searches for the table and returns its Max ID.
+uint32_t findAndGetMaxID(const char *filename, const char *table_name);
+
 /// Clears all the pages with the table data and erases the TableLink.
 /// (DROP TABLE ...).
 void deleteTable(const char *filename, const char *table_name);
 
 /// Outputs all the records of the table filtering them through the provided filter.
 /// (SELECT * FROM ... WHERE ...)
-void printTable(const char *filename, const char *table_name, int num_of_filters, SearchFilter **filters);
+void printTable(const char *filename, const char *table_name, size_t num_of_filters, SearchFilter **filters);
 
-/// Outputs fields from all the records of the table filtering them through the provided filter.
-/// (SELECT ... FROM ... WHERE ...)
-void printFields(const char *filename, const char *table_name, int num_of_fields, size_t *field_indexes, int num_of_filters, SearchFilter **filters);
+/// Updates filtered rows.
+/// (UPDATE ... FROM ... WHERE ...)
+void updateRows(const char *filename, const char *table_name, TableRecord *new_value, size_t num_of_filters, SearchFilter **filters);
+
+/// Deletes filtered rows.
+/// (DELETE FROM ... WHERE ...)
+void deleteRows(const char *filename, const char *table_name, size_t num_of_filters, SearchFilter **filters);
 
 #endif //LLP_LAB1_C_DB_FILE_MANAGER_H

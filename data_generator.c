@@ -59,7 +59,7 @@ char *generateRandomFloatString(size_t min_len, size_t max_len)
     if (random() % 2) {
         string[0] = '-';
         while (string[1] == '0') string[1] = (char)(random() % 10 + '0');
-        while (pt < 2) pt = random() % len;
+        while (pt < 2) pt = random() % (len - 1);
     } else {
         while (string[0] == '0') string[0] = (char) (random() % 10 + '0');
         while (pt < 1) pt = random() % (len - 1);
@@ -75,7 +75,7 @@ Field *generateField()
 
 TableSchema *generateSchema(size_t min_len, size_t max_len)
 {
-    size_t len = (random() % (max_len - min_len + 1)) + min_len + 1;
+    size_t len = (random() % (max_len - min_len + 1)) + min_len;
     Field **fields = (Field**) malloc(sizeof(Field*) * len);
     fields[0] = createField("ITEM_ID", INTEGER);
     for (size_t i = 1; i < len; i++) fields[i] = generateField();
@@ -115,6 +115,7 @@ void generateTable(char *filename, char *table_name, size_t min_cols, size_t max
     for (size_t i = 0; i < len; i++) insertTableRecord(table, generateRecord(tableSchema, &id_counter));
     addTableHeader(filename, table);
     destroyTable(table);
+    findAndUpdateMaxID(filename, table_name, len - 1);
 }
 
 void generateDatabase(char *filename, size_t num_of_tables, char **table_names, size_t min_length, size_t max_length)
