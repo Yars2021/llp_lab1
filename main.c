@@ -42,7 +42,7 @@ void performanceTestMode(int argc, char **argv)
                     printf("-h : prints out the key manual for the program.\n");
                     printf("-g : generates a new set of data.\n");
                     printf("-i : performs the insertion test. Inserts 50 random records into every table.\n");
-                    printf("-s : performs the selection test. Prints out the contents of a random table.\n");
+                    printf("-s : performs the selection test. Prints first 50 records of a random table and demonstrates the usage of SearchFilters.\n");
                     printf("-d : performs the deletion test. Deletes a random table.\n");
                     printf("-u : performs the update test. Updates 50 random records in every table.\n");
                     printf("-r : performs the removal test. Removes 50 random records from every table.\n");
@@ -77,7 +77,10 @@ void performanceTestMode(int argc, char **argv)
                 case 's': {
                     size_t table_index = random() % NUM_OF_TABLES;
                     printf("Performing the selection test on \"%s\"...\n\n", table_names[table_index]);
-                    printTable(TARGET_FILE, table_names[table_index], 0, NULL);
+                    uint64_t max_id = 50;
+                    SearchFilter *id_constraint = createSearchFilter(INTEGER, NULL, &max_id);
+                    bindFilter(id_constraint, 0);
+                    printTable(TARGET_FILE, table_names[table_index], 1, &id_constraint);
                     break;
                 }
                 case 'd': {
@@ -111,9 +114,6 @@ void performanceTestMode(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-    int64_t t = 10;
-    SearchFilter *searchFilter = createSearchFilter(createField("f", INTEGER), &t, NULL);
-    printf("%d\n", applyFilter(searchFilter, createDataCell("1023085732")));
-    //performanceTestMode(argc, argv);
+    performanceTestMode(argc, argv);
     return 0;
 }

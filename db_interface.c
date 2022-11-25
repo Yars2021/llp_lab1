@@ -28,16 +28,17 @@ double parseFloat(const char *line)
     for (size_t i = 0, j = 0; j < strlen(line); i++)
         if (i == pt_index) continue;
         else pointless_string[j++] = line[i];
+
     double result = (double) parseInteger(pointless_string);
     free(pointless_string);
     for (size_t i = 0; i < strlen(line) - pt_index - 1; i++) result /= 10;
     return result;
 }
 
-SearchFilter *createSearchFilter(Field *field, void *lower_threshold, void *upper_threshold)
+SearchFilter *createSearchFilter(FieldType fieldType, void *lower_threshold, void *upper_threshold)
 {
     SearchFilter *searchFilter = (SearchFilter*) malloc(sizeof(SearchFilter));
-    searchFilter->field = field;
+    searchFilter->fieldType = fieldType;
     searchFilter->lower_threshold = lower_threshold;
     searchFilter->upper_threshold = upper_threshold;
     return searchFilter;
@@ -49,11 +50,6 @@ void bindFilter(SearchFilter *searchFilter, size_t column)
     searchFilter->field_index = column;
 }
 
-int cmpFloat(char *a, char *b)
-{
-
-}
-
 int cmpBoolean(const char *a, const char *b)
 {
     if (strcmp(a, b) == 0) return 0;
@@ -63,8 +59,8 @@ int cmpBoolean(const char *a, const char *b)
 
 int applyFilter(SearchFilter *searchFilter, const char *dataCell)
 {
-    if (!searchFilter || !searchFilter->field || !dataCell) return FILTER_NULL_POINTER;
-    switch (searchFilter->field->fieldType) {
+    if (!searchFilter || !dataCell) return FILTER_NULL_POINTER;
+    switch (searchFilter->fieldType) {
         case INTEGER: {
             int64_t cell_value = parseInteger(dataCell);
             if (!searchFilter->lower_threshold) {

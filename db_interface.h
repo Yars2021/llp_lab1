@@ -14,8 +14,9 @@
 #define FILTER_INCOMPATIBLE (-1)
 #define FILTER_NULL_POINTER (-2)
 
+/// A filter, which binds to a table field by index.
 typedef struct {
-    Field *field;
+    FieldType fieldType;
     size_t field_index;
     void *lower_threshold;
     void *upper_threshold;
@@ -28,7 +29,7 @@ int64_t parseInteger(const char *line);
 double parseFloat(const char *line);
 
 /// Creates a new instance of a SearchFilter.
-SearchFilter *createSearchFilter(Field *field, void *lower_threshold, void *upper_threshold);
+SearchFilter *createSearchFilter(FieldType fieldType, void *lower_threshold, void *upper_threshold);
 
 /// Binds the filter to the column by its index.
 void bindFilter(SearchFilter *searchFilter, size_t column);
