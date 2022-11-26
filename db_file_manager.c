@@ -608,6 +608,10 @@ void printTable(const char *filename, const char *table_name, size_t num_of_filt
         while (dataPage->page_data[page_index] == '\0') page_index++;
         for (; page_index < dataPage->header.data_size && index < length; page_index += (strlen(dataPage->page_data + page_index) + 1), index++) {
             while (dataPage->page_data[page_index] == '\0') page_index++;
+            if (page_index >= PAGE_DATA_SIZE) {
+                index--;
+                break;
+            }
             TableRecord *tableRecord = parseTableRecordJSON(dataPage->page_data + page_index, 0, &pos, tableSchema);
 
             switch (applyAll(tableRecord, num_of_filters, filters)) {
@@ -688,6 +692,10 @@ void deleteRows(const char *filename, const char *table_name, size_t num_of_filt
         while (dataPage->page_data[page_index] == '\0') page_index++;
         for (; page_index < dataPage->header.data_size && index < length; page_index += (strlen(dataPage->page_data + page_index) + 1), index++) {
             while (dataPage->page_data[page_index] == '\0') page_index++;
+            if (page_index >= PAGE_DATA_SIZE) {
+                index--;
+                break;
+            }
             TableRecord *tableRecord = parseTableRecordJSON(dataPage->page_data + page_index, 0, &pos, tableSchema);
 
             if (applyAll(tableRecord, num_of_filters, filters) == FILTER_ACCEPT) {
