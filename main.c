@@ -45,7 +45,7 @@ void performanceTestMode(int argc, char **argv)
                     printf("-s : performs the selection test. Prints first 50 records of a random table and demonstrates the usage of SearchFilters.\n");
                     printf("-d : performs the deletion test. Deletes a random table.\n");
                     printf("-u : performs the update test. Updates 50 random records in every table.\n");
-                    printf("-r : performs the removal test. Removes 50 random records from every table.\n");
+                    printf("-r : performs the removal test. Removes the records with ID between 5 and 25 from a random table.\n");
                     print_time = 0;
                     break;
                 }
@@ -100,9 +100,16 @@ void performanceTestMode(int argc, char **argv)
                     break;
                 }
                 case 'r': {
-                    clock_t removal_time = start;
-                    printf("Performing the removal test...\n");
-                    // ToDo Print time after each removal.
+                    size_t table_index = random() % NUM_OF_TABLES;
+                    printf("Performing the removal test on \"%s\"...\n\n", table_names[table_index]);
+                    TableSchema *tableSchema = getSchema(TARGET_FILE, table_names[table_index]);
+                    size_t key_col = tableSchema->key_column_index;
+                    destroyTableSchema(tableSchema);
+                    uint64_t min_id = 5, max_id = 25;
+                    SearchFilter *id_constraint = createSearchFilter(INTEGER, &min_id, &max_id);
+                    bindFilter(id_constraint, key_col);
+                    deleteRows(TARGET_FILE, table_names[table_index], 1, &id_constraint);
+                    destroySearchFilter(id_constraint);
                     break;
                 }
                 default:

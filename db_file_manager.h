@@ -204,7 +204,13 @@ void printTable(const char *filename, const char *table_name, size_t num_of_filt
 /// (UPDATE ... FROM ... WHERE ...)
 void updateRows(const char *filename, const char *table_name, TableRecord *new_value, size_t num_of_filters, SearchFilter **filters);
 
-/// Deletes filtered rows.
+/// Returns 1 if the page is empty (contains only \0 chars).
+int checkEmpty(const char *filename, size_t page_index);
+
+/// Expels a page from its thread, linking its parent to the next one or to itself if the expelled page was the tail of the thread.
+void expelPageFromThread(const char *filename, size_t parent_page, size_t page_index);
+
+/// Deletes filtered rows. If the removal empties a page, it gets expelled from the thread and can be reused later.
 /// (DELETE FROM ... WHERE ...)
 void deleteRows(const char *filename, const char *table_name, size_t num_of_filters, SearchFilter **filters);
 
