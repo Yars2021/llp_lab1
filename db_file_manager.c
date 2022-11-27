@@ -605,11 +605,10 @@ void printTable(const char *filename, const char *table_name, size_t num_of_filt
         current = dataPage->header.next_related_page;
         page_index = 0;
 
-        while (dataPage->page_data[page_index] == '\0') page_index++;
         for (; page_index < dataPage->header.data_size && index < length; page_index += (strlen(dataPage->page_data + page_index) + 1), index++) {
             while (dataPage->page_data[page_index] == '\0') page_index++;
             if (page_index >= PAGE_DATA_SIZE) {
-                index--;
+                if (index > 0) index--;
                 break;
             }
             TableRecord *tableRecord = parseTableRecordJSON(dataPage->page_data + page_index, 0, &pos, tableSchema);
@@ -638,7 +637,75 @@ void printTable(const char *filename, const char *table_name, size_t num_of_filt
 
 void updateRows(const char *filename, const char *table_name, TableRecord *new_value, size_t num_of_filters, SearchFilter **filters)
 {
-    if (!filename || !table_name || !new_value || !filters) return;
+    if (!filename || !table_name) return;
+    size_t search_result = findTable(filename, table_name);
+    if (search_result == SEARCH_TABLE_NOT_FOUND) return;
+
+    DataPage *tableHeader = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, tableHeader, search_result);
+    size_t length = getTableLength(tableHeader), data = tableHeader->header.next_related_page, pos;
+    TableSchema *tableSchema = parseTableSchemaJSON(tableHeader->page_data, 0, &pos);
+    free(tableHeader);
+
+    size_t index = 0, page_index, updated = 0, parent_index, expel_candidate;
+    for (uint64_t current = data, last = search_result; current != last && index < length;) {
+        parent_index = last;
+        expel_candidate = current;
+        last = current;
+        DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
+        Table *updated_records = createTable(tableSchema, table_name);
+        readDataPage(filename, dataPage, current);
+        current = dataPage->header.next_related_page;
+        page_index = 0;
+
+        for (; page_index < dataPage->header.data_size && index < length; page_index += (strlen(dataPage->page_data + page_index) + 1), index++) {
+            while (dataPage->page_data[page_index] == '\0') page_index++;
+            if (page_index >= PAGE_DATA_SIZE) {
+                if (index > 0) index--;
+                break;
+            }
+            TableRecord *tableRecord = parseTableRecordJSON(dataPage->page_data + page_index, 0, &pos, tableSchema);
+
+            if (applyAll(tableRecord, num_of_filters, filters) == FILTER_ACCEPT) {
+                char **new_cells = (char**) malloc(sizeof(char*) * tableRecord->length);
+                for (size_t i = 0; i < tableRecord->length; i++)
+                    if (i == tableSchema->key_column_index) new_cells[i] = createDataCell(tableRecord->dataCells[i]);
+                    else new_cells[i] = createDataCell(new_value->dataCells[i]);
+
+                TableRecord *newRec = createTableRecord(tableRecord->length, new_cells);
+                insertTableRecord(updated_records, newRec);
+
+                memset(dataPage->page_data + page_index, '\0', pos);
+                updated++;
+            }
+
+            destroyTableRecord(tableRecord);
+        }
+        writeDataPage(filename, dataPage);
+        free(dataPage);
+
+        insertTableRecords(filename, updated_records);
+
+        for (TableRecord *curRec = updated_records->firstTableRecord; curRec != NULL; curRec = curRec->next_record) {
+            for (size_t i = 0; i < curRec->length; i++) free(curRec->dataCells[i]);
+            free(curRec->dataCells);
+        }
+
+        updated_records->length = 0;
+        free(updated_records);
+
+        tableHeader = (DataPage*) malloc(sizeof(DataPage));
+        readDataPage(filename, tableHeader, search_result);
+        updateTableLength(tableHeader, length);
+        writeDataPage(filename, tableHeader);
+        free(tableHeader);
+
+        if (checkEmpty(filename, expel_candidate)) expelPageFromThread(filename, parent_index, expel_candidate);
+    }
+
+    destroyTableSchema(tableSchema);
+
+    printf("Table updated.\n");
 }
 
 int checkEmpty(const char *filename, size_t page_index)
@@ -689,11 +756,10 @@ void deleteRows(const char *filename, const char *table_name, size_t num_of_filt
         readDataPage(filename, dataPage, current);
         current = dataPage->header.next_related_page;
         page_index = 0;
-        while (dataPage->page_data[page_index] == '\0') page_index++;
         for (; page_index < dataPage->header.data_size && index < length; page_index += (strlen(dataPage->page_data + page_index) + 1), index++) {
             while (dataPage->page_data[page_index] == '\0') page_index++;
             if (page_index >= PAGE_DATA_SIZE) {
-                index--;
+                if (index > 0) index--;
                 break;
             }
             TableRecord *tableRecord = parseTableRecordJSON(dataPage->page_data + page_index, 0, &pos, tableSchema);
@@ -718,4 +784,6 @@ void deleteRows(const char *filename, const char *table_name, size_t num_of_filt
     updateTableLength(tableHeader, getTableLength(tableHeader) - removed);
     writeDataPage(filename, tableHeader);
     free(tableHeader);
+
+    printf("Deleted %zd items.\n", removed);
 }

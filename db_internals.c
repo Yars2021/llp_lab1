@@ -402,8 +402,10 @@ void destroyTable(Table *table)
     TableRecord **tableRecords = (TableRecord**) malloc(sizeof(TableRecord*) * table->length);
     TableRecord *current = table->firstTableRecord;
 
-    for (size_t i = 0; i < table->length; i++, current = current->next_record) tableRecords[i] = current;
-    for (size_t i = 0; i < table->length; i++) destroyTableRecord(tableRecords[i]);
+    if (current != NULL) {
+        for (size_t i = 0; i < table->length; i++, current = current->next_record) tableRecords[i] = current;
+        for (size_t i = 0; i < table->length; i++) destroyTableRecord(tableRecords[i]);
+    }
 
     free(tableRecords);
 
