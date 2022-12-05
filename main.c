@@ -5,8 +5,8 @@
 
 #define TARGET_FILE "../.database"
 #define NUM_OF_TABLES 15
-#define MIN_TABLE_LEN 1000
-#define MAX_TABLE_LEN 5000
+#define MIN_TABLE_LEN 25000
+#define MAX_TABLE_LEN 25000
 
 void performanceTestMode(int argc, char **argv)
 {
