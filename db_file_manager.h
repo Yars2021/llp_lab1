@@ -202,7 +202,7 @@ void printTable(const char *filename, const char *table_name, size_t num_of_filt
 
 /// Updates filtered rows.
 /// (UPDATE ... FROM ... WHERE ...)
-void updateRows(const char *filename, const char *table_name, TableRecord *new_value, size_t num_of_filters, SearchFilter **filters);
+void updateRows(const char *filename, char *table_name, TableRecord *new_value, size_t num_of_filters, SearchFilter **filters);
 
 /// Returns 1 if the page is empty (contains only \0 chars).
 int checkEmpty(const char *filename, size_t page_index);

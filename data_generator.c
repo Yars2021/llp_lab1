@@ -8,7 +8,7 @@ char *uint_to_str(size_t uint)
 {
     char *reversed = (char*) malloc(32);
     for (size_t i = 0; i < 32; i++) reversed[i] = '\0';
-    size_t len = 0, zero = 0;
+    size_t len = 0;
     for (size_t i = 0; uint > 0; i++, len++, uint /= 10) {
         reversed[i] = (char)(uint % 10);
         reversed[i] += '0';

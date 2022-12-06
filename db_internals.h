@@ -137,6 +137,6 @@ char *transformTableLinkToJSON(TableLink *tableLink);
 TableLink *parseTableLinkJSON(const char *line, size_t pos, size_t *ending_index);
 
 /// Destroys the TableLink instance.
-void destroyTableLink(TableLink *tableLink);
+void destroyTableLink(TableLink *tableLink, int save_name);
 
 #endif //LLP_LAB1_C_DB_INTERNALS_H

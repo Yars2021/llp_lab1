@@ -3,10 +3,10 @@
 #include "db_file_manager.h"
 #include "data_generator.h"
 
-#define TARGET_FILE "../.database"
+#define TARGET_FILE "/home/yars/CLionProjects/llp_lab1_c/.database"
 #define NUM_OF_TABLES 15
-#define MIN_TABLE_LEN 25000
-#define MAX_TABLE_LEN 25000
+#define MIN_TABLE_LEN 10000
+#define MAX_TABLE_LEN 10000
 
 void performanceTestMode(int argc, char **argv)
 {

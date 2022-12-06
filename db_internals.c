@@ -85,14 +85,16 @@ Field *parseFieldJSON(const char *line, size_t pos, size_t *ending_index)
 
     *ending_index = pos + strlen("{'':'','':''}") + strlen(JSON_FIELD_NAME) + strlen(JSON_FIELD_TYPE) + strlen(field->field_name) + 1;
 
+    regfree(&regexp_rec);
+
     return field;
 }
 
 void destroyField(Field *field)
 {
     if (!field) return;
-    field->field_name = 0;
     field->fieldType = INTEGER;
+    free(field->field_name);
     free(field);
 }
 
@@ -150,7 +152,7 @@ TableSchema *parseTableSchemaJSON(const char *line, size_t pos, size_t *ending_i
     if (!line || pos >= strlen(line)) return NULL;
 
     char *long_substr_reg = "(.+?)";
-    char *format = (char*) malloc(strlen("^\\{'':'','':'','':''\\}$") + strlen(JSON_SCHEMA_KEY_I) + strlen(JSON_SCHEMA_NUM_OF_FIELDS) +
+    char *format = (char*) malloc(strlen("^\\{'':'','':'','':\\[\\]\\}$") + strlen(JSON_SCHEMA_KEY_I) + strlen(JSON_SCHEMA_NUM_OF_FIELDS) +
             strlen(JSON_SCHEMA_FIELDS) + strlen(long_substr_reg) * 3 + 1);
     sprintf(format, "^\\{\"%s\":\"%s\",\"%s\":\"%s\",\"%s\":\\[%s\\]\\}$", JSON_SCHEMA_KEY_I, long_substr_reg, JSON_SCHEMA_NUM_OF_FIELDS, long_substr_reg,
             JSON_SCHEMA_FIELDS, long_substr_reg);
@@ -177,6 +179,8 @@ TableSchema *parseTableSchemaJSON(const char *line, size_t pos, size_t *ending_i
     if (num_of_fields == 0 || key_col_i >= num_of_fields) return NULL;
 
     free(format);
+
+    regfree(&regexp_rec);
 
     Field **fields = (Field**) malloc(sizeof(Field*) * num_of_fields);
     char *field_reg = "(\\{.+?\\}),";
@@ -222,6 +226,8 @@ TableSchema *parseTableSchemaJSON(const char *line, size_t pos, size_t *ending_i
     free(fields_format);
     free(string_key_col_i);
     free(string_num_of_fields);
+
+    regfree(&regexp_fields_rec);
 
     return tableSchema;
 }
@@ -340,6 +346,8 @@ TableRecord *parseTableRecordJSON(const char *line, size_t pos, size_t *ending_i
     for (size_t i = 0; i < tableSchema->number_of_fields; i++) *ending_index += (strlen("'',") + strlen(cells[i]));
     (*ending_index)--;
 
+    regfree(&regexp_rec);
+
     return tableRecord;
 }
 
@@ -397,7 +405,7 @@ void destroyTable(Table *table)
 {
     if (!table) return;
     table->table_name = "";
-    destroyTableSchema(table->tableSchema);
+    //destroyTableSchema(table->tableSchema);
 
     TableRecord **tableRecords = (TableRecord**) malloc(sizeof(TableRecord*) * table->length);
     TableRecord *current = table->firstTableRecord;
@@ -469,12 +477,15 @@ TableLink *parseTableLinkJSON(const char *line, size_t pos, size_t *ending_index
 
     free(string_link);
 
+    regfree(&regexp_rec);
+
     return tableLink;
 }
 
-void destroyTableLink(TableLink *tableLink)
+void destroyTableLink(TableLink *tableLink, int save_name)
 {
     if (!tableLink) return;
     tableLink->link = 0;
+    if (!save_name) free(tableLink->table_name);
     free(tableLink);
 }

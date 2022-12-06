@@ -350,7 +350,7 @@ size_t findTableOnPage(DataPage *dataPage, const char *table_name, size_t *check
         TableLink *tableLink = parseTableLinkJSON(dataPage->page_data + index, 0, &parsed);
         index += parsed;
         if (tableLink != NULL && strcmp(table_name, tableLink->table_name) == 0) found = tableLink->link;
-        destroyTableLink(tableLink);
+        destroyTableLink(tableLink, 0);
         while (dataPage->page_data[index] == '\0' && index < PAGE_DATA_SIZE) index++;
         (*checked)++;
     }
@@ -418,7 +418,7 @@ void addTableHeader(const char *filename, Table *table)
 
     TableLink *tableLink = createTableLink(table->table_name, table_header);
     char *table_link = transformTableLinkToJSON(tableLink);
-    destroyTableLink(tableLink);
+    destroyTableLink(tableLink, 1);
     appendDataOrExpandThread(filename, PAGE_DB_ROOT_INDEX, table_link);
     free(table_link);
 
@@ -495,7 +495,7 @@ size_t findAndErase(DataPage *dataPage, const char *table_name, size_t *checked)
             stop = 1;
         }
         index += parsed;
-        destroyTableLink(tableLink);
+        destroyTableLink(tableLink, 0);
         while (dataPage->page_data[index] == '\0' && index < PAGE_DATA_SIZE) index++;
         (*checked)++;
     }
@@ -606,7 +606,7 @@ void printTable(const char *filename, const char *table_name, size_t num_of_filt
         page_index = 0;
 
         for (; page_index < dataPage->header.data_size && index < length; page_index += (strlen(dataPage->page_data + page_index) + 1), index++) {
-            while (dataPage->page_data[page_index] == '\0') page_index++;
+            while (dataPage->page_data[page_index] == '\0' && page_index < PAGE_DATA_SIZE) page_index++;
             if (page_index >= PAGE_DATA_SIZE) {
                 if (index > 0) index--;
                 break;
@@ -635,7 +635,7 @@ void printTable(const char *filename, const char *table_name, size_t num_of_filt
     destroyTableSchema(tableSchema);
 }
 
-void updateRows(const char *filename, const char *table_name, TableRecord *new_value, size_t num_of_filters, SearchFilter **filters)
+void updateRows(const char *filename, char *table_name, TableRecord *new_value, size_t num_of_filters, SearchFilter **filters)
 {
     if (!filename || !table_name) return;
     size_t search_result = findTable(filename, table_name);
@@ -659,7 +659,7 @@ void updateRows(const char *filename, const char *table_name, TableRecord *new_v
         page_index = 0;
 
         for (; page_index < dataPage->header.data_size && index < length; page_index += (strlen(dataPage->page_data + page_index) + 1), index++) {
-            while (dataPage->page_data[page_index] == '\0') page_index++;
+            while (dataPage->page_data[page_index] == '\0' && page_index < PAGE_DATA_SIZE) page_index++;
             if (page_index >= PAGE_DATA_SIZE) {
                 if (index > 0) index--;
                 break;
@@ -686,10 +686,8 @@ void updateRows(const char *filename, const char *table_name, TableRecord *new_v
 
         insertTableRecords(filename, updated_records);
 
-        for (TableRecord *curRec = updated_records->firstTableRecord; curRec != NULL; curRec = curRec->next_record) {
-            for (size_t i = 0; i < curRec->length; i++) free(curRec->dataCells[i]);
-            free(curRec->dataCells);
-        }
+        for (TableRecord *curRec = updated_records->firstTableRecord; curRec != NULL; curRec = curRec->next_record)
+            destroyTableRecord(curRec);
 
         updated_records->length = 0;
         free(updated_records);
@@ -757,7 +755,7 @@ void deleteRows(const char *filename, const char *table_name, size_t num_of_filt
         current = dataPage->header.next_related_page;
         page_index = 0;
         for (; page_index < dataPage->header.data_size && index < length; page_index += (strlen(dataPage->page_data + page_index) + 1), index++) {
-            while (dataPage->page_data[page_index] == '\0') page_index++;
+            while (dataPage->page_data[page_index] == '\0' && page_index < PAGE_DATA_SIZE) page_index++;
             if (page_index >= PAGE_DATA_SIZE) {
                 if (index > 0) index--;
                 break;
