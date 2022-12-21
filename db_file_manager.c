@@ -785,3 +785,164 @@ void deleteRows(const char *filename, const char *table_name, size_t num_of_filt
 
     printf("Deleted %zd items.\n", removed);
 }
+
+void innerJoinSelect(const char *filename, const char *left_table, const char *right_table, size_t l_join_index, size_t r_join_index, size_t num_of_l_filters, SearchFilter **l_filters, size_t num_of_r_filters, SearchFilter **r_filters)
+{
+    if (!filename || !left_table || !right_table) return;
+    size_t left_search = findTable(filename, left_table), right_search = findTable(filename, right_table);
+    if (left_search == SEARCH_TABLE_NOT_FOUND || right_table == SEARCH_TABLE_NOT_FOUND) return;
+    TableSchema *leftSchema = getSchema(filename, left_table), *rightSchema = getSchema(filename, right_table);
+    if (l_join_index >= leftSchema->number_of_fields || r_join_index >= rightSchema->number_of_fields || leftSchema->fields[l_join_index]->fieldType != rightSchema->fields[r_join_index]->fieldType) {
+        destroyTableSchema(leftSchema);
+        destroyTableSchema(rightSchema);
+        return;
+    }
+
+    printf("|  ");
+
+    for (size_t i = 0; i < leftSchema->number_of_fields; i++) {
+        char *field_type;
+        switch (leftSchema->fields[i]->fieldType) {
+            case INTEGER:
+                field_type = "INTEGER";
+                break;
+            case FLOAT:
+                field_type = "FLOAT";
+                break;
+            case BOOLEAN:
+                field_type = "BOOLEAN";
+                break;
+            default:
+                field_type = "STRING";
+                break;
+        }
+
+        if (i != l_join_index) printf("%s.%s : %s  |  ", left_table, leftSchema->fields[i]->field_name, field_type);
+    }
+
+    char *j_type = leftSchema->fields[l_join_index]->fieldType == INTEGER ? "INTEGER" :
+            leftSchema->fields[l_join_index]->fieldType == FLOAT ? "FLOAT" :
+            leftSchema->fields[l_join_index]->fieldType == BOOLEAN ? "BOOLEAN" : "STRING";
+
+    printf("<< %s.%s ~ %s.%s : %s >>  |  ", left_table, leftSchema->fields[l_join_index]->field_name, right_table, rightSchema->fields[r_join_index]->field_name, j_type);
+
+    for (size_t i = 0; i < rightSchema->number_of_fields; i++) {
+        char *field_type;
+        switch (rightSchema->fields[i]->fieldType) {
+            case INTEGER:
+                field_type = "INTEGER";
+                break;
+            case FLOAT:
+                field_type = "FLOAT";
+                break;
+            case BOOLEAN:
+                field_type = "BOOLEAN";
+                break;
+            default:
+                field_type = "STRING";
+                break;
+        }
+
+        if (i != r_join_index) printf("%s.%s : %s  |  ", right_table, rightSchema->fields[i]->field_name, field_type);
+    }
+
+    printf("\n----------------------------------------------------------------------------------------------------------------------------------------------------\n");
+
+    Table *rightTable = createTable(rightSchema, "__temp_filtered_right");
+    DataPage *rightHeader = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, rightHeader, right_search);
+    size_t right_length = getTableLength(rightHeader), right_data = rightHeader->header.next_related_page, r_pos = 0;
+    free(rightHeader);
+
+    size_t index = 0, page_index;
+    for (uint64_t current = right_data, last = right_search; current != last && index < right_length;) {
+        last = current;
+        DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
+        readDataPage(filename, dataPage, current);
+        current = dataPage->header.next_related_page;
+        page_index = 0;
+
+        for (; page_index < dataPage->header.data_size && index < right_length; page_index += (strlen(dataPage->page_data + page_index) + 1), index++) {
+            while (dataPage->page_data[page_index] == '\0' && page_index < PAGE_DATA_SIZE) page_index++;
+            if (page_index >= PAGE_DATA_SIZE) {
+                if (index > 0) index--;
+                break;
+            }
+            TableRecord *tableRecord = parseTableRecordJSON(dataPage->page_data + page_index, 0, &r_pos, rightSchema);
+
+            switch (applyAll(tableRecord, num_of_r_filters, r_filters)) {
+                case FILTER_ACCEPT:
+                    insertTableRecord(rightTable, tableRecord);
+                    break;
+                case FILTER_REJECT:
+                    break;
+                case FILTER_INCOMPATIBLE:
+                    printf("%zd: Filter type error\n", index);
+                    break;
+            }
+        }
+        free(dataPage);
+    }
+
+    DataPage *leftHeader = (DataPage*) malloc(sizeof(DataPage));
+    readDataPage(filename, leftHeader, left_search);
+    size_t left_length = getTableLength(rightHeader), left_data = rightHeader->header.next_related_page, l_pos = 0;
+    free(leftHeader);
+
+    size_t record_number = 0;
+    index = 0;
+    for (uint64_t current = left_data, last = right_search; current != last && index < left_length;) {
+        last = current;
+        DataPage *dataPage = (DataPage*) malloc(sizeof(DataPage));
+        readDataPage(filename, dataPage, current);
+        current = dataPage->header.next_related_page;
+        page_index = 0;
+
+        for (; page_index < dataPage->header.data_size && index < left_length; page_index += (strlen(dataPage->page_data + page_index) + 1), index++) {
+            while (dataPage->page_data[page_index] == '\0' && page_index < PAGE_DATA_SIZE) page_index++;
+            if (page_index >= PAGE_DATA_SIZE) {
+                if (index > 0) index--;
+                break;
+            }
+            TableRecord *leftRecord = parseTableRecordJSON(dataPage->page_data + page_index, 0, &l_pos, leftSchema);
+
+            switch (applyAll(leftRecord, num_of_l_filters, l_filters)) {
+                case FILTER_ACCEPT: {
+                    TableRecord *rightRecord = rightTable->firstTableRecord;
+                    for (size_t i = 0; i < rightTable->length && rightRecord != NULL; i++) {
+                        if (strcmp(leftRecord->dataCells[l_join_index], rightRecord->dataCells[r_join_index]) == 0) {
+                            printf("%zd: | ", record_number);
+
+                            for (size_t li = 0; li < leftRecord->length; li++)
+                                if (li != l_join_index)
+                                    printf("%s | ", leftRecord->dataCells[li]);
+
+                            printf(" << %s >>  | ", leftRecord->dataCells[l_join_index]);
+
+                            for (size_t ri = 0; ri < rightRecord->length; ri++)
+                                if (ri != r_join_index)
+                                    printf("%s | ", rightRecord->dataCells[ri]);
+
+                            printf("\n");
+
+                            record_number++;
+                        }
+                        rightRecord = rightRecord->next_record;
+                    }
+                    break;
+                }
+                case FILTER_REJECT:
+                    break;
+                case FILTER_INCOMPATIBLE:
+                    printf("%zd: Filter type error\n", index);
+                    break;
+            }
+            destroyTableRecord(leftRecord);
+        }
+        free(dataPage);
+    }
+
+    destroyTable(rightTable);
+    destroyTableSchema(leftSchema);
+    destroyTableSchema(rightSchema);
+}

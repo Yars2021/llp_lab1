@@ -405,7 +405,6 @@ void destroyTable(Table *table)
 {
     if (!table) return;
     table->table_name = "";
-    //destroyTableSchema(table->tableSchema);
 
     TableRecord **tableRecords = (TableRecord**) malloc(sizeof(TableRecord*) * table->length);
     TableRecord *current = table->firstTableRecord;

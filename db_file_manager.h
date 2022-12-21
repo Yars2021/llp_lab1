@@ -214,4 +214,8 @@ void expelPageFromThread(const char *filename, size_t parent_page, size_t page_i
 /// (DELETE FROM ... WHERE ...)
 void deleteRows(const char *filename, const char *table_name, size_t num_of_filters, SearchFilter **filters);
 
+/// Merges 2 tables into one in runtime (with filters) and outputs the result.
+/// (SELECT FROM ... INNER JOIN ... ON ... WHERE ...)
+void innerJoinSelect(const char *filename, const char *left_table, const char *right_table, size_t l_join_index, size_t r_join_index, size_t num_of_l_filters, SearchFilter **l_filters, size_t num_of_r_filters, SearchFilter **r_filters);
+
 #endif //LLP_LAB1_C_DB_FILE_MANAGER_H

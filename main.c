@@ -5,8 +5,8 @@
 
 #define TARGET_FILE "/home/yars/CLionProjects/llp_lab1_c/.database"
 #define NUM_OF_TABLES 15
-#define MIN_TABLE_LEN 10000
-#define MAX_TABLE_LEN 10000
+#define MIN_TABLE_LEN 10
+#define MAX_TABLE_LEN 10
 
 void performanceTestMode(int argc, char **argv)
 {
@@ -46,6 +46,7 @@ void performanceTestMode(int argc, char **argv)
                     printf("-d : performs the deletion test. Deletes a random table.\n");
                     printf("-u : performs the update test. Updates the records with ID between 0 and 10 in a random table.\n");
                     printf("-r : performs the removal test. Removes the records with ID between 5 and 25 from a random table.\n");
+                    printf("-j : performs the join test. Joins 2 random tables on their IDs.\n");
                     print_time = 0;
                     break;
                 }
@@ -123,6 +124,12 @@ void performanceTestMode(int argc, char **argv)
                     bindFilter(id_constraint, key_col);
                     deleteRows(TARGET_FILE, table_names[table_index], 1, &id_constraint);
                     destroySearchFilter(id_constraint);
+                    break;
+                }
+                case 'j': {
+                    size_t l_table_index = random() % NUM_OF_TABLES, r_table_index = random() % NUM_OF_TABLES;
+                    printf("Performing the join test on \"%s\" and \"%s\"...\n\n", table_names[l_table_index], table_names[r_table_index]);
+                    innerJoinSelect(TARGET_FILE, table_names[l_table_index], table_names[r_table_index], 0, 0, 0, NULL, 0, NULL);
                     break;
                 }
                 default:
