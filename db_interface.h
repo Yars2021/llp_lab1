@@ -18,6 +18,7 @@
 typedef struct {
     FieldType fieldType;
     size_t field_index;
+    int inverted;
     void *lower_threshold;
     void *upper_threshold;
 } SearchFilter;

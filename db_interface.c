@@ -39,6 +39,7 @@ SearchFilter *createSearchFilter(FieldType fieldType, void *lower_threshold, voi
 {
     SearchFilter *searchFilter = (SearchFilter*) malloc(sizeof(SearchFilter));
     searchFilter->fieldType = fieldType;
+    searchFilter->inverted = 0;
     searchFilter->lower_threshold = lower_threshold;
     searchFilter->upper_threshold = upper_threshold;
     return searchFilter;
@@ -143,11 +144,13 @@ int applyAll(TableRecord *tableRecord, size_t num_of_filters, SearchFilter **fil
 {
     if (!tableRecord) return FILTER_NULL_POINTER;
     if (num_of_filters == 0 || !filters) return FILTER_ACCEPT;
-    if (num_of_filters > tableRecord->length) return FILTER_INCOMPATIBLE;
 
     for (size_t i = 0; i < num_of_filters; i++) {
         if (filters[i]->field_index > tableRecord->length) return FILTER_INCOMPATIBLE;
         int exitcode = applyFilter(filters[i], tableRecord->dataCells[filters[i]->field_index]);
+
+        if (filters[i]->inverted && exitcode >= 0) exitcode = !exitcode;
+
         if (exitcode == FILTER_ACCEPT) continue;
         else return exitcode;
     }
